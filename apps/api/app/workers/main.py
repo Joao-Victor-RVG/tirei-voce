@@ -11,6 +11,7 @@ from app.modules.notifications.email import EmailMessage, build_email_sender
 from app.modules.notifications.whatsapp import build_whatsapp_sender
 from app.workers.draws import scheduled_draws
 from app.workers.notifications import push_chat_message, push_draw_done
+from app.workers.privacy import retention_purge
 from app.workers.reminders import send_due_reminders
 
 logger = logging.getLogger(__name__)
@@ -42,4 +43,6 @@ class WorkerSettings:
         cron(send_due_reminders, minute=set(range(0, 60, 5)), run_at_startup=True, timeout=240),
         # Todo minuto: o grupo é travado com FOR UPDATE, então dois workers não sorteiam duas vezes.
         cron(scheduled_draws, second=0, run_at_startup=True, timeout=55),
+        # LGPD: limpeza diária às 4h (UTC) de dados além do prazo de retenção.
+        cron(retention_purge, hour=4, minute=0, second=0, timeout=600),
     ]  # não guarda resultados (nem argumentos) depois de executar

@@ -8,6 +8,7 @@ from app.modules.draws.router import router as draws_router
 from app.modules.groups.router import router as groups_router
 from app.modules.notifications.router import router as push_router
 from app.modules.participants.router import router as participants_router
+from app.modules.privacy.router import router as privacy_router
 from app.modules.rules.router import router as rules_router
 from app.modules.users.router import router as users_router
 from app.modules.wishlist.router import router as wishlist_router
@@ -23,3 +24,4 @@ api_router.include_router(draws_router)
 api_router.include_router(chat_router)
 api_router.include_router(push_router)
 api_router.include_router(admin_router)
+api_router.include_router(privacy_router)

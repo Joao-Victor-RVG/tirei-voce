@@ -46,6 +46,7 @@ docker compose -f infra/docker-compose.yml logs -f worker   # procure por "verif
 | `make migration m="descrição"` | Gera uma migration nova (autogenerate) |
 | `make seed` | Carrega os temas iniciais (idempotente) |
 | `make api-types` | Regenera `openapi.json` e os tipos TypeScript do front |
+| `make admin email=…` | Dá acesso ao painel `/admin` (só por comando, nunca pela API) |
 | `make keys` | Gera `JWT_SECRET`, `DRAW_ENCRYPTION_KEY`, `DRAW_HMAC_KEY` e as chaves VAPID |
 | `make prod-up` | Sobe as imagens de produção em http://localhost:8080 |
 
@@ -72,6 +73,8 @@ Todas documentadas em [`.env.example`](.env.example). As principais:
 | `RESEND_API_KEY`, `EMAIL_FROM` | com Resend | Envio de e-mail transacional |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` | não | Login com Google (sem elas o botão some) |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | não | Notificações push (sem elas o push fica desligado) |
+| `WHATSAPP_PROVIDER` | não | `none` (padrão) ou `console` (dev); ainda sem provedor real |
+| `RETENTION_MONTHS`, `UNVERIFIED_ACCOUNT_DAYS` | não | Prazos de retenção (12 meses / 30 dias) |
 | `SENTRY_DSN` | não | Sentry desligado por padrão |
 
 Em produção a API **se recusa a subir** com os segredos padrão de dev, `JWT_SECRET` curto ou
@@ -158,6 +161,33 @@ Navegador ──► web (nginx: SPA + proxy /api) ──► api (FastAPI, N rép
   `sent_reminders` garante um envio só, mesmo com várias réplicas do worker. O e-mail pode ser
   desligado no perfil.
 
+## Fase 3: escala e retenção
+
+- **Sorteio agendado:** `draw_scheduled_at` no grupo. Um cron do worker, a cada minuto, executa
+  em nome do dono pelo mesmo núcleo do sorteio manual (`FOR UPDATE`, então N workers sorteiam uma
+  vez só). Se as regras impedirem, limpa o agendamento e avisa a organização.
+- **Próxima edição:** `POST /groups/{id}/duplicate` copia as configurações. Com
+  `avoid_previous_pairs`, os pares do último sorteio da edição anterior viram restrições internas
+  do motor, mapeadas por usuário, e nunca são expostas.
+- **Revelação:** `GET /groups/{id}/my-santa` mostra, a partir do horário do evento, só quem tirou
+  o próprio usuário. Nunca revela os demais pares. O chat anônimo ganha o nome nessa hora, e um
+  lembrete "Hora da revelação!" sai no horário do evento.
+- **WhatsApp:** contrato `WhatsAppSender` + telefone/opt-in no perfil (só aparece com provedor).
+  Para plugar a Cloud API (Meta) ou a Twilio, implemente `send` em
+  `app/modules/notifications/whatsapp.py`.
+- **Admin:** `/admin` com métricas agregadas, busca e desativação de usuários. A flag `is_admin`
+  só é concedida por comando, e a área responde 404 para quem não é admin. O admin não acessa
+  pares, chats nem listas.
+- **LGPD:**
+  - `GET /me/export` baixa os dados do usuário em JSON.
+  - `POST /me/delete` exige a senha (ou "EXCLUIR" em contas Google). Se a pessoa nunca esteve
+    num sorteio, a conta é apagada de vez; senão, é **anonimizada** ("Participante removido",
+    sem e-mail, senha, foto, telefone, listas e mensagens), para os sorteios dos outros
+    continuarem funcionando.
+  - Grupos criados pela pessoa passam para um coorganizador ou para o membro mais antigo.
+  - Um job diário apaga grupos sem atividade há 12 meses, contas nunca confirmadas há 30 dias,
+    contas anonimizadas que não estão em mais nenhum grupo e tokens vencidos.
+
 ## Deploy
 
 As imagens de produção são multi-stage e rodam com **usuário não root**:
@@ -219,5 +249,5 @@ Firefox, que tratam `localhost` como seguro.
   telas.
 - **Fase 2 (implementada):** coorganizadores, "presente comprado" com progresso agregado, chat
   anônimo, PWA com notificações push e lembretes agendados.
-- **Fase 3:** sorteio agendado, não repetir pares, revelação no evento, WhatsApp, painel admin,
-  LGPD (exclusão de conta).
+- **Fase 3 (implementada):** sorteio agendado, próxima edição sem repetir pares, revelação de
+  "quem me tirou" no evento, interface de WhatsApp (sem provedor), painel admin e LGPD.

@@ -27,6 +27,19 @@ export function PrivacyPage() {
         tirou quem pela aplicação.
       </p>
       <p>Não vendemos seus dados e não usamos suas informações para publicidade.</p>
+      <h2 className="text-xl font-extrabold">Por quanto tempo guardamos</h2>
+      <p>
+        Dados de grupos sem atividade (incluindo listas, conversas e o resultado cifrado do sorteio)
+        são apagados automaticamente 12 meses depois do evento. Contas que nunca confirmaram o
+        e-mail são apagadas depois de 30 dias.
+      </p>
+      <h2 className="text-xl font-extrabold">Seus direitos (LGPD)</h2>
+      <p>
+        No seu perfil você pode baixar uma cópia dos seus dados e excluir sua conta a qualquer
+        momento. Se você estiver em um grupo já sorteado, seu nome vira “Participante removido” e
+        seus dados pessoais, listas e mensagens são apagados; assim o sorteio das outras pessoas
+        continua funcionando.
+      </p>
     </StaticPage>
   );
 }

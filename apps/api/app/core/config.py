@@ -46,6 +46,10 @@ class Settings(BaseSettings):
     # WhatsApp: sem provedor real por enquanto. "console" só registra no log (dev).
     whatsapp_provider: Literal["none", "console"] = "none"
 
+    # LGPD: dados de grupos sem atividade são apagados depois deste prazo.
+    retention_months: int = Field(default=12, ge=1)
+    unverified_account_days: int = Field(default=30, ge=1)
+
     sentry_dsn: str | None = None
     sentry_traces_sample_rate: float = 0.0
 

@@ -2823,6 +2823,67 @@
           }
         }
       }
+    },
+    "/api/v1/me/export": {
+      "get": {
+        "tags": ["privacy"],
+        "summary": "Export My Data",
+        "description": "Todos os dados pessoais do usuário (LGPD, art. 18), em JSON para download.",
+        "operationId": "export_my_data_api_v1_me_export_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Export My Data Api V1 Me Export Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/delete": {
+      "post": {
+        "tags": ["privacy"],
+        "summary": "Delete My Account",
+        "operationId": "delete_my_account_api_v1_me_delete_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteAccountIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteAccountOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3304,6 +3365,49 @@
         "type": "object",
         "required": ["csrf_token"],
         "title": "CsrfOut"
+      },
+      "DeleteAccountIn": {
+        "properties": {
+          "password": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 256
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password"
+          },
+          "confirm": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirm"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "DeleteAccountIn",
+        "description": "Contas com senha confirmam com a senha; contas só Google digitam EXCLUIR."
+      },
+      "DeleteAccountOut": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "title": "Mode"
+          }
+        },
+        "type": "object",
+        "required": ["mode"],
+        "title": "DeleteAccountOut"
       },
       "DrawOut": {
         "properties": {

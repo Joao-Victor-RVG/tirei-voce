@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { Alert, Avatar, Button, Card, Field, Input, PageLoader } from "@/components/ui";
 import { useMe, useUpdateMe } from "@/features/auth/api";
+import { MyDataCard } from "@/features/auth/MyDataCard";
 import { PushCard } from "@/features/auth/PushCard";
 import { WhatsAppCard } from "@/features/auth/WhatsAppCard";
 import { VerifyEmailBanner } from "@/features/auth/VerifyEmailBanner";
@@ -106,6 +107,7 @@ function ProfileForm({ me }: { me: NonNullable<ReturnType<typeof useMe>["data"]>
       </Card>
       <PushCard />
       <WhatsAppCard me={me} />
+      <MyDataCard me={me} />
     </div>
   );
 }

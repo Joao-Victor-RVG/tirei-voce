@@ -919,6 +919,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export My Data
+         * @description Todos os dados pessoais do usuário (LGPD, art. 18), em JSON para download.
+         */
+        get: operations["export_my_data_api_v1_me_export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Delete My Account */
+        post: operations["delete_my_account_api_v1_me_delete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1140,6 +1177,21 @@ export interface components {
         CsrfOut: {
             /** Csrf Token */
             csrf_token: string;
+        };
+        /**
+         * DeleteAccountIn
+         * @description Contas com senha confirmam com a senha; contas só Google digitam EXCLUIR.
+         */
+        DeleteAccountIn: {
+            /** Password */
+            password?: string | null;
+            /** Confirm */
+            confirm?: string | null;
+        };
+        /** DeleteAccountOut */
+        DeleteAccountOut: {
+            /** Mode */
+            mode: string;
         };
         /**
          * DrawOut
@@ -3701,6 +3753,61 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AdminUserOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_my_data_api_v1_me_export_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    delete_my_account_api_v1_me_delete_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeleteAccountIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteAccountOut"];
                 };
             };
             /** @description Validation Error */

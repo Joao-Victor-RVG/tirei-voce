@@ -303,3 +303,22 @@ test("perfil mostra WhatsApp só quando há provedor e salva o opt-in", async ()
     }),
   );
 });
+
+test("excluir conta pede a senha e volta para o início", async () => {
+  const calls = mockApi((url, init) => {
+    if (url.pathname.endsWith("/me/delete") && init.method === "POST")
+      return { body: { mode: "anonymized" } };
+    if (url.pathname.endsWith("/me")) return { body: { ...ME, email_verified: true } };
+    if (url.pathname.endsWith("/push/config"))
+      return { body: { enabled: false, public_key: null, subscribed: false } };
+    if (url.pathname.endsWith("/auth/config"))
+      return { body: { google_enabled: false, whatsapp_enabled: false } };
+  });
+  const { router } = renderRoute("/profile");
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: "Excluir minha conta" }));
+  await user.type(screen.getByLabelText("Sua senha"), "minha-senha-123");
+  await user.click(screen.getByRole("button", { name: "Excluir para sempre" }));
+  await waitFor(() => expect(router.state.location.pathname).toBe("/"));
+  expect(calls.find((c) => c.path === "/me/delete")?.body).toEqual({ password: "minha-senha-123" });
+});

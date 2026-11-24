@@ -23,6 +23,8 @@ class User(UUIDPrimaryKey, Timestamps, Base):
     whatsapp_opt_in: Mapped[bool] = mapped_column(default=False, server_default=false())
     # Só por comando (python -m app.admin grant <email>); nunca pela API.
     is_admin: Mapped[bool] = mapped_column(default=False, server_default=false())
+    # Conta excluída e anonimizada (mantida só para não quebrar sorteios de outras pessoas).
+    deleted_at: Mapped[datetime | None]
 
     __table_args__ = (Index("uq_users_email_lower", func.lower(email), unique=True),)
 

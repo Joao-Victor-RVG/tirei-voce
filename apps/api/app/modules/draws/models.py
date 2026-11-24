@@ -12,7 +12,10 @@ class Draw(UUIDPrimaryKey, Timestamps, Base):
 
     group_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("groups.id", ondelete="CASCADE"))
     version: Mapped[int]
-    executed_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), index=True)
+    # Fica nulo se a conta de quem sorteou for apagada (LGPD).
+    executed_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
     executed_at: Mapped[datetime] = mapped_column(server_default=func.now())
     # HMAC do resultado completo: detecta adulteração das atribuições sem revelá-las.
     seed_hash: Mapped[str] = mapped_column(String(64))
