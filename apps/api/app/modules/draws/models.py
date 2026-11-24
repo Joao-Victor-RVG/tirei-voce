@@ -19,6 +19,8 @@ class Draw(UUIDPrimaryKey, Timestamps, Base):
     executed_at: Mapped[datetime] = mapped_column(server_default=func.now())
     # HMAC do resultado completo: detecta adulteração das atribuições sem revelá-las.
     seed_hash: Mapped[str] = mapped_column(String(64))
+    # SHA-256 de (usuário, Idempotency-Key): repetir o clique devolve este mesmo sorteio.
+    idempotency_key_hash: Mapped[str | None] = mapped_column(String(64))
 
     __table_args__ = (UniqueConstraint("group_id", "version"),)
 

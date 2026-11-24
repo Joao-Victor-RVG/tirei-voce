@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import ConflictError, UnprocessableError
 from app.core.ids import uuid7
-from app.core.redis import get_redis
 from app.modules.draws import crypto, engine
 from app.modules.draws.models import Draw, DrawAssignment
 from app.modules.draws.repository import DrawRepository
@@ -35,7 +34,6 @@ from app.modules.wishlist.schemas import PreferencesOut, WishlistItemOut
 # Atenção: nada neste módulo pode logar ou devolver pares de outras pessoas.
 logger = logging.getLogger(__name__)
 
-IDEMPOTENCY_TTL_SECONDS = 24 * 3600
 IMPOSSIBLE_MESSAGE = (
     "Com as restrições atuais não existe sorteio possível. Revise os círculos/pares bloqueados."
 )
@@ -89,21 +87,24 @@ class DrawService:
     async def execute(
         self, group_id: uuid.UUID, user: User, idempotency_key: str | None
     ) -> DrawOut:
-        idem_key = self._idempotency_redis_key(group_id, user, idempotency_key)
-        if idem_key and (cached := await get_redis().get(idem_key)):
-            return DrawOut.model_validate_json(cached)
+        idem_hash = self._idempotency_hash(user, idempotency_key)
 
         # Trava a linha do grupo: dois "Sortear" simultâneos não geram dois sorteios.
         membership = await self.access.organizer(group_id, user, for_update=True)
         group = membership.group
         if group.status in (GroupStatus.DRAWN, GroupStatus.FINISHED):
-            if idem_key and (cached := await get_redis().get(idem_key)):
-                return DrawOut.model_validate_json(cached)
+            # A chave fica gravada no próprio sorteio, na mesma transação: quem esperava a
+            # trava enxerga o resultado do clique anterior sem nenhuma janela de corrida.
+            draw = await self.draws.latest(group.id)
+            if idem_hash and draw is not None and draw.idempotency_key_hash == idem_hash:
+                return DrawOut(
+                    draw_id=draw.id,
+                    version=draw.version,
+                    executed_at=draw.executed_at,
+                    participant_count=await self.draws.count_assignments(draw.id),
+                )
             raise ConflictError("O sorteio deste grupo já foi feito.", code="already_drawn")
-        result = await self._perform(group, executed_by=user.id)
-        if idem_key:
-            await get_redis().set(idem_key, result.model_dump_json(), ex=IDEMPOTENCY_TTL_SECONDS)
-        return result
+        return await self._perform(group, executed_by=user.id, idempotency_key_hash=idem_hash)
 
     async def execute_scheduled(self, group_id: uuid.UUID, now: datetime) -> ScheduledDrawResult:
         """Sorteio automático (worker). Roda em nome de quem criou o grupo."""
@@ -128,7 +129,13 @@ class DrawService:
             return ScheduledDrawResult(group_id=group_id, done=False, error=exc.message)
         return ScheduledDrawResult(group_id=group_id, done=True, error=None)
 
-    async def _perform(self, group: Group, *, executed_by: uuid.UUID) -> DrawOut:
+    async def _perform(
+        self,
+        group: Group,
+        *,
+        executed_by: uuid.UUID,
+        idempotency_key_hash: str | None = None,
+    ) -> DrawOut:
         """Núcleo do sorteio: o grupo já deve estar travado (FOR UPDATE) pelo chamador."""
         ensure_transition(group, GroupStatus.DRAWN)
         people, rules = await self._rules(group)
@@ -159,6 +166,7 @@ class DrawService:
             executed_by=executed_by,
             executed_at=datetime.now(UTC),
             seed_hash=crypto.assignment_digest(draw_id, assignment),
+            idempotency_key_hash=idempotency_key_hash,
         )
         assignments = [
             DrawAssignment(
@@ -324,8 +332,8 @@ class DrawService:
         ]
 
     @staticmethod
-    def _idempotency_redis_key(group_id: uuid.UUID, user: User, key: str | None) -> str | None:
+    def _idempotency_hash(user: User, key: str | None) -> str | None:
+        """A mesma chave só "repete" o sorteio para a mesma pessoa que a enviou."""
         if not key:
             return None
-        digest = hashlib.sha256(key.encode()).hexdigest()
-        return f"idem:draw:{group_id}:{user.id}:{digest}"
+        return hashlib.sha256(f"{user.id}:{key}".encode()).hexdigest()

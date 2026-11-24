@@ -37,6 +37,10 @@ class DrawRepository:
         )
         return await self.session.scalar(stmt)
 
+    async def count_assignments(self, draw_id: uuid.UUID) -> int:
+        stmt = select(func.count()).where(DrawAssignment.draw_id == draw_id)
+        return int(await self.session.scalar(stmt) or 0)
+
     async def assignments(self, draw_id: uuid.UUID) -> list[DrawAssignment]:
         stmt = select(DrawAssignment).where(DrawAssignment.draw_id == draw_id)
         return list((await self.session.scalars(stmt)).all())

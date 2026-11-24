@@ -156,18 +156,26 @@ async def test_concurrent_draws_produce_a_single_draw(user_client: UserClientFac
 async def test_idempotency_key_returns_same_result(user_client: UserClientFactory) -> None:
     ana = await user_client("Ana")
     others = [await user_client(n) for n in NAMES]
-    group, _ = await group_with_members(ana, others)
+    group, ids = await group_with_members(ana, others)
     base = f"/api/v1/groups/{group['id']}"
+    await ana.put(f"{base}/participants/{ids['Bia']}/co-organizer")
     headers = {"Idempotency-Key": "clique-123"}
-    first, second = await asyncio.gather(
-        ana.post(f"{base}/draw", headers=headers), ana.post(f"{base}/draw", headers=headers)
-    )
-    assert first.status_code == second.status_code == 200
-    assert first.json() == second.json()
-    third = await ana.post(f"{base}/draw", headers=headers)
-    assert third.json() == first.json()
-    other_key = await ana.post(f"{base}/draw", headers={"Idempotency-Key": "outro"})
-    assert other_key.status_code == 409
+
+    # Cliques simultâneos com a mesma chave: todos recebem o MESMO sorteio, nenhum 409.
+    responses = await asyncio.gather(*(ana.post(f"{base}/draw", headers=headers) for _ in range(5)))
+    assert [r.status_code for r in responses] == [200] * 5
+    assert len({r.text for r in responses}) == 1
+    assert responses[0].json()["participant_count"] == 4
+
+    again = await ana.post(f"{base}/draw", headers=headers)
+    assert again.json() == responses[0].json()
+    assert (await ana.post(f"{base}/draw", headers={"Idempotency-Key": "outro"})).status_code == 409
+    assert (await ana.post(f"{base}/draw")).status_code == 409
+    # A chave é por pessoa: outra pessoa da organização não "reaproveita" o resultado.
+    bia = others[0]
+    assert (await bia.post(f"{base}/draw", headers=headers)).status_code == 409
+    async with get_sessionmaker()() as session:
+        assert len((await session.scalars(select(Draw))).all()) == 1
 
 
 async def test_join_blocked_after_draw(user_client: UserClientFactory) -> None:
