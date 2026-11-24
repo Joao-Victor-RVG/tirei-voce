@@ -1,89 +1,137 @@
 # Blueprint do Render: https://render.com/docs/blueprint-spec
-# Só o "web" (nginx) é público; API e worker ficam na rede privada.
+# Validado contra https://render.com/schema/render.yaml.json (make render-check).
+#
+# Só o "web" (nginx) é público. API, worker, Postgres e Key Value ficam na rede privada.
+# Tudo em "virginia": é a região do Render mais próxima do Brasil (não dá para trocar depois).
+#
+# Segredos marcados com "sync: false" são pedidos UMA vez, na criação do Blueprint.
+# API e worker pedem alguns dos mesmos valores: use exatamente o mesmo nas duas telas.
+
 services:
   - type: web
     name: tirei-voce-web
     runtime: docker
-    dockerfilePath: ./apps/web/Dockerfile
+    region: virginia
+    plan: 0.5c-512mb
+    dockerfilePath: ./apps/web/Dockerfile # o último estágio (web) é o de produção
     dockerContext: ./apps/web
-    dockerTarget: web
     healthCheckPath: /healthz
+    autoDeployTrigger: checksPass # só faz deploy com o CI verde
     envVars:
       - key: PORT
         value: "8080"
-      - key: API_UPSTREAM
-        value: http://tirei-voce-api:8000
-      - key: REAL_IP_FROM
+      - key: API_HOSTPORT # host:porta privados da API, usados no proxy_pass do nginx
+        fromService:
+          type: pserv
+          name: tirei-voce-api
+          property: hostport
+      - key: REAL_IP_FROM # saltos internos em que o nginx confia para achar o IP do visitante
         value: 10.0.0.0/8
 
   - type: pserv
     name: tirei-voce-api
     runtime: docker
-    dockerfilePath: ./apps/api/Dockerfile
+    region: virginia
+    plan: 0.5c-512mb
+    dockerfilePath: ./apps/api/Dockerfile # o último estágio (api) é o padrão
     dockerContext: ./apps/api
-    dockerTarget: api
     preDeployCommand: alembic upgrade head && python -m app.seed
+    autoDeployTrigger: checksPass
     envVars:
       - fromGroup: tirei-voce
-      - key: DATABASE_URL
-        fromDatabase: { name: tirei-voce-db, property: connectionString }
-      - key: REDIS_URL
-        fromService: { type: keyvalue, name: tirei-voce-redis, property: connectionString }
       - key: PORT
         value: "8000"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tirei-voce-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: tirei-voce-redis
+          property: connectionString
+      - key: FRONTEND_URL # ex.: https://tirei-voce-web.onrender.com (depois, o seu domínio)
+        sync: false
+      - key: GOOGLE_REDIRECT_URI # <FRONTEND_URL>/api/v1/auth/google/callback
+        sync: false
+      - key: DRAW_ENCRYPTION_KEY # make keys (chave Fernet). Igual no worker!
+        sync: false
+      - key: VAPID_PUBLIC_KEY # make keys. Igual no worker!
+        sync: false
+      - key: VAPID_PRIVATE_KEY # make keys. Igual no worker!
+        sync: false
+      - key: RESEND_API_KEY # obrigatório: sem e-mail ninguém confirma a conta
+        sync: false
+      - key: EMAIL_FROM # ex.: Tirei Você! <nao-responda@seudominio.com.br>
+        sync: false
+      - key: GOOGLE_CLIENT_ID # opcional: vazio desliga o login com Google
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: SENTRY_DSN # opcional
+        sync: false
 
   - type: worker
     name: tirei-voce-worker
     runtime: docker
+    region: virginia
+    plan: 0.5c-512mb
     dockerfilePath: ./apps/api/Dockerfile
     dockerContext: ./apps/api
-    dockerTarget: worker
+    dockerCommand: arq app.workers.main.WorkerSettings
+    autoDeployTrigger: checksPass
+    maxShutdownDelaySeconds: 60 # termina o job em andamento antes de desligar
     envVars:
       - fromGroup: tirei-voce
       - key: DATABASE_URL
-        fromDatabase: { name: tirei-voce-db, property: connectionString }
+        fromDatabase:
+          name: tirei-voce-db
+          property: connectionString
       - key: REDIS_URL
-        fromService: { type: keyvalue, name: tirei-voce-redis, property: connectionString }
+        fromService:
+          type: keyvalue
+          name: tirei-voce-redis
+          property: connectionString
+      - key: FRONTEND_URL # mesmo valor da API (links dos e-mails)
+        sync: false
+      - key: DRAW_ENCRYPTION_KEY # mesmo valor da API
+        sync: false
+      - key: VAPID_PUBLIC_KEY # mesmo valor da API
+        sync: false
+      - key: VAPID_PRIVATE_KEY # mesmo valor da API
+        sync: false
+      - key: RESEND_API_KEY # mesmo valor da API
+        sync: false
+      - key: EMAIL_FROM # mesmo valor da API
+        sync: false
+      - key: SENTRY_DSN # opcional
+        sync: false
 
   - type: keyvalue
     name: tirei-voce-redis
-    plan: starter
-    ipAllowList: []
-    maxmemoryPolicy: noeviction
+    region: virginia
+    plan: 256mb
+    ipAllowList: [] # só a rede privada do Render
+    maxmemoryPolicy: noeviction # é fila de jobs: nunca descartar chaves
 
 databases:
   - name: tirei-voce-db
     databaseName: tirei_voce
+    region: virginia
+    plan: 0.1c-256mb
     postgresMajorVersion: "16"
+    ipAllowList: [] # sem acesso externo; só serviços do Render
 
 envVarGroups:
+  # Valores compartilhados por API e worker. Grupos não aceitam "sync: false".
+  # generateValue gera o segredo UMA vez para o grupo: API e worker usam o mesmo.
   - name: tirei-voce
     envVars:
       - key: ENVIRONMENT
         value: production
-      - key: FRONTEND_URL
-        sync: false # ex.: https://tirei-voce-web.onrender.com ou seu domínio
-      - key: GOOGLE_REDIRECT_URI
-        sync: false # <FRONTEND_URL>/api/v1/auth/google/callback
+      - key: EMAIL_PROVIDER
+        value: resend
       - key: JWT_SECRET
         generateValue: true
       - key: DRAW_HMAC_KEY
         generateValue: true
-      - key: DRAW_ENCRYPTION_KEY
-        sync: false # make keys (precisa ser uma chave Fernet)
-      - key: EMAIL_PROVIDER
-        value: resend
-      - key: EMAIL_FROM
-        sync: false
-      - key: RESEND_API_KEY
-        sync: false
-      - key: GOOGLE_CLIENT_ID
-        sync: false
-      - key: GOOGLE_CLIENT_SECRET
-        sync: false
-      - key: VAPID_PUBLIC_KEY
-        sync: false # make keys
-      - key: VAPID_PRIVATE_KEY
-        sync: false # make keys
-      - key: SENTRY_DSN
-        sync: false

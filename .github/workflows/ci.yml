@@ -97,6 +97,14 @@ jobs:
       - name: Falha se openapi.json/schema.d.ts mudaram (rode make api-types)
         run: git diff --exit-code -- apps/web/openapi.json apps/web/src/api/schema.d.ts
 
+  render:
+    name: render.yaml válido
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uvx --with pyyaml --with jsonschema --with certifi python -I infra/scripts/render_check.py render.yaml
+
   docker:
     name: Imagens de produção
     runs-on: ubuntu-latest

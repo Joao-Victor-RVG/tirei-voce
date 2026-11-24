@@ -206,17 +206,35 @@ Firefox, que tratam `localhost` como seguro.
 
 ### Render
 
-1. Faça o fork/push do repositório e, no Render, crie um **Blueprint** apontando para ele. O
-   `render.yaml` cria o web (público), a API (serviço privado), o worker, o Postgres e o Key Value.
-2. Preencha as variáveis marcadas como `sync: false` no grupo `tirei-voce`:
-   - `FRONTEND_URL`: a URL pública do web (ex.: `https://tirei-voce-web.onrender.com`);
-   - `GOOGLE_REDIRECT_URI`: `<FRONTEND_URL>/api/v1/auth/google/callback`;
-   - `DRAW_ENCRYPTION_KEY`: saída de `make keys`;
-   - `RESEND_API_KEY` e `EMAIL_FROM`.
+O `render.yaml` segue a especificação atual e é validado no CI contra o schema oficial
+(`make render-check`). Ele cria, todos na região **virginia** (a mais próxima do Brasil, e que
+não dá para trocar depois):
 
-   `JWT_SECRET` e `DRAW_HMAC_KEY` são gerados pelo Render.
-3. As migrations rodam no `preDeployCommand` da API.
-4. No Google Cloud Console, cadastre `GOOGLE_REDIRECT_URI` como *Authorized redirect URI*.
+| Recurso | Tipo | Acesso |
+|---|---|---|
+| `tirei-voce-web` | web (nginx + SPA, proxy de `/api`) | **público** |
+| `tirei-voce-api` | serviço privado (FastAPI; migrations no pre-deploy) | só rede interna |
+| `tirei-voce-worker` | background worker (arq) | só rede interna |
+| `tirei-voce-db` | Postgres 16 | sem acesso externo |
+| `tirei-voce-redis` | Key Value (`noeviction`, por ser fila) | sem acesso externo |
+
+Os deploys só acontecem com o CI verde (`autoDeployTrigger: checksPass`). Todos os planos são
+pagos: o web gratuito "dorme" e o Postgres gratuito expira. Confira os preços atuais no Render.
+
+1. Rode `make keys` e guarde a saída num gerenciador de senhas.
+2. No Render, vá em **New → Blueprint** e escolha este repositório.
+3. Na criação, o Render pede os segredos **uma vez por serviço**. A API e o worker pedem alguns
+   iguais (`FRONTEND_URL`, `DRAW_ENCRYPTION_KEY`, `VAPID_*`, `RESEND_API_KEY`, `EMAIL_FROM`):
+   use **exatamente os mesmos valores** nas duas telas. Se a `DRAW_ENCRYPTION_KEY` divergir, o
+   worker não consegue ler os sorteios.
+   - `FRONTEND_URL`: a URL do web (ex.: `https://tirei-voce-web.onrender.com`).
+   - `GOOGLE_REDIRECT_URI`: `<FRONTEND_URL>/api/v1/auth/google/callback`.
+   - `RESEND_API_KEY` e `EMAIL_FROM` são **obrigatórios**: sem eles a API não sobe em produção.
+   - Google e Sentry são opcionais e podem ficar vazios.
+4. `JWT_SECRET` e `DRAW_HMAC_KEY` são gerados pelo Render, uma vez só, e compartilhados pela API
+   e pelo worker.
+5. Ao trocar de domínio, atualize `FRONTEND_URL` (API e worker) e `GOOGLE_REDIRECT_URI` no painel.
+   Depois da criação, o Render não pergunta mais esses valores.
 
 ### Railway
 
@@ -234,7 +252,7 @@ Firefox, que tratam `localhost` como seguro.
    - **api** e **worker:** `DATABASE_URL=${{Postgres.DATABASE_URL}}`,
      `REDIS_URL=${{Redis.REDIS_URL}}`, mais os segredos da tabela acima e `ENVIRONMENT=production`.
    - **api:** também `HOST=::`, porque a rede privada do Railway é IPv6.
-   - **web:** `API_UPSTREAM=http://api.railway.internal:8000` e `REAL_IP_FROM` com a faixa de
+   - **web:** `API_HOSTPORT=api.railway.internal:8000` e `REAL_IP_FROM` com a faixa de
      IPs do proxy de borda do Railway.
 4. Em **api**, configure o *Pre-deploy command*: `alembic upgrade head && python -m app.seed`.
 

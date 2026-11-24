@@ -21,7 +21,7 @@ RUN pnpm build
 # ---- web: nginx sem root (porta 8080) ----
 FROM nginxinc/nginx-unprivileged:1.27-alpine AS web
 ENV PORT=8080 \
-    API_UPSTREAM=http://api:8000 \
+    API_HOSTPORT=api:8000 \
     REAL_IP_FROM=10.0.0.0/8
 COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html

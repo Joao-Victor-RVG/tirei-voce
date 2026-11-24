@@ -1,4 +1,4 @@
-# Processado pelo envsubst da imagem oficial: ${PORT}, ${API_UPSTREAM} e ${REAL_IP_FROM}.
+# Processado pelo envsubst da imagem oficial: ${PORT}, ${API_HOSTPORT} e ${REAL_IP_FROM}.
 
 # IP real do visitante: confia só nos saltos da rede privada (load balancer da plataforma).
 set_real_ip_from ${REAL_IP_FROM};
@@ -30,7 +30,7 @@ server {
 
     # Mesma origem para front e API: os cookies SameSite=Lax funcionam sem CORS.
     location /api/ {
-        proxy_pass ${API_UPSTREAM};
+        proxy_pass http://${API_HOSTPORT};
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $remote_addr;

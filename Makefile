@@ -2,7 +2,7 @@ COMPOSE := docker compose -f infra/docker-compose.yml
 API := cd apps/api &&
 WEB := cd apps/web &&
 
-.PHONY: dev down logs migrate migration seed admin keys api-types prod-up prod-down test test-api test-web lint lint-api lint-web format help
+.PHONY: dev down logs migrate migration seed admin keys render-check api-types prod-up prod-down test test-api test-web lint lint-api lint-web format help
 
 dev: ## Sobe tudo (postgres, redis, api, worker, web) com hot reload
 	$(COMPOSE) up --build
@@ -21,6 +21,9 @@ seed: ## Carrega os dados iniciais (temas); idempotente
 
 admin: ## Dá acesso ao painel admin: make admin email=fulano@exemplo.com
 	$(COMPOSE) exec api python -m app.admin grant "$(email)"
+
+render-check: ## Valida o render.yaml contra o schema oficial do Render
+	uvx --with pyyaml --with jsonschema --with certifi python -I infra/scripts/render_check.py render.yaml
 
 keys: ## Gera segredos novos (JWT, chaves do sorteio e VAPID do push)
 	@cd apps/api && uv run python -m app.keys

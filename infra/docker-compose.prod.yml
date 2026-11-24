@@ -63,7 +63,7 @@ services:
   web:
     build: { context: ../apps/web, target: web }
     environment:
-      API_UPSTREAM: http://api:8000
+      API_HOSTPORT: api:8000
       REAL_IP_FROM: 172.16.0.0/12
     ports:
       - "8080:8080"
