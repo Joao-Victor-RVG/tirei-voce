@@ -140,6 +140,24 @@ Navegador ──► web (nginx: SPA + proxy /api) ──► api (FastAPI, N rép
   Um teste varre todas as rotas GET do OpenAPI como organizador procurando pares alheios.
   Nenhum log contém pares.
 
+## Fase 2: engajamento
+
+- **Coorganizadores:** o dono promove participantes a `co_owner`. Eles têm os mesmos poderes de
+  organização, menos gerir coorganizadores; ninguém remove o dono.
+- **Presente comprado:** cada pessoa marca o próprio presente. A organização vê só
+  `GET /groups/{id}/gift-progress` (`{purchased, total}`), nunca quem comprou.
+- **Chat anônimo:** cada participante tem duas conversas, com quem tirou e com "seu amigo
+  secreto". A conversa anônima é achada pelo `receiver_lookup_hash`. As mensagens guardam só o
+  papel de quem enviou (`giver`/`receiver`), nunca a pessoa. O front faz polling a cada 10 s.
+- **PWA + push:** manifest, service worker (sem cache offline) e Web Push com VAPID
+  (`pywebpush`). Só são aceitos endpoints dos serviços de push conhecidos, o que evita SSRF.
+  Os jobs da fila carregam apenas ids neutros e o worker resolve o destinatário, então nenhum
+  par fica no Redis. As notificações do chat não mostram conteúdo nem nomes.
+- **Lembretes:** cron do arq a cada 5 min envia o lembrete do prazo da lista (1 dia antes, só para
+  listas vazias) e os de 1 dia e 2 horas antes do evento, por e-mail e push. A tabela
+  `sent_reminders` garante um envio só, mesmo com várias réplicas do worker. O e-mail pode ser
+  desligado no perfil.
+
 ## Deploy
 
 As imagens de produção são multi-stage e rodam com **usuário não root**:
@@ -199,6 +217,7 @@ Firefox, que tratam `localhost` como seguro.
 
 - **Fase 1 (MVP, implementada):** contas, grupos, convites, listas, regras, sorteio e todas as
   telas.
-- **Fase 2:** chat anônimo, "presente comprado", lembretes, PWA/push, coorganizadores.
+- **Fase 2 (implementada):** coorganizadores, "presente comprado" com progresso agregado, chat
+  anônimo, PWA com notificações push e lembretes agendados.
 - **Fase 3:** sorteio agendado, não repetir pares, revelação no evento, WhatsApp, painel admin,
   LGPD (exclusão de conta).
