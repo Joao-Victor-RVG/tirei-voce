@@ -436,3 +436,64 @@ test("organização vê só o progresso agregado dos presentes", async () => {
     "3",
   );
 });
+
+test("chat: lista as duas conversas e envia mensagem anônima", async () => {
+  const sent: unknown[] = [];
+  const history: unknown[] = [
+    { id: "m2", from_me: false, body: "Qual seu tamanho?", created_at: "2026-11-20T12:00:00Z" },
+  ];
+  mockApi((url, init) => {
+    const path = url.pathname.replace("/api/v1", "");
+    if (path === "/me") return json(ME);
+    if (path === "/groups/g1") return json(group({ status: "DRAWN", my_role: "member" }));
+    if (path === "/groups/g1/chats")
+      return json([
+        { thread: "match", title: "Caio", unread: 0, last_message: null },
+        {
+          thread: "santa",
+          title: "Seu amigo secreto",
+          unread: 2,
+          last_message: {
+            id: "m2",
+            from_me: false,
+            body: "Qual seu tamanho?",
+            created_at: "2026-11-20T12:00:00Z",
+          },
+        },
+      ]);
+    if (path === "/groups/g1/chats/santa/messages" && init.method === "POST") {
+      const message = {
+        id: "m3",
+        from_me: true,
+        body: JSON.parse(String(init.body)).body,
+        created_at: "2026-11-20T12:05:00Z",
+      };
+      sent.push(message);
+      history.push(message);
+      return json(message, 201);
+    }
+    if (path === "/groups/g1/chats/santa/messages")
+      return json({ items: history, next_cursor: null });
+    if (path === "/groups/g1/chats/santa/read") return { status: 204 };
+  });
+  renderRoute("/groups/g1?tab=chat");
+  const user = userEvent.setup();
+  expect(await screen.findByText("Seu amigo secreto")).toBeInTheDocument();
+  expect(screen.getAllByLabelText("2 não lidas").length).toBeGreaterThan(0);
+
+  await user.click(screen.getByText("Seu amigo secreto"));
+  expect(await screen.findByText("Qual seu tamanho?")).toBeInTheDocument();
+  await user.type(screen.getByLabelText("Mensagem"), "M, obrigada!{Enter}");
+  expect(await screen.findByText("M, obrigada!")).toBeInTheDocument();
+  expect(sent).toHaveLength(1);
+});
+
+test("aba Chat só aparece depois do sorteio", async () => {
+  mockApi((url) => {
+    if (url.pathname.endsWith("/me")) return json(ME);
+    if (url.pathname.endsWith("/groups/g1")) return json(group({ status: "OPEN" }));
+  });
+  renderRoute("/groups/g1");
+  expect(await screen.findByRole("tab", { name: "Visão geral" })).toBeInTheDocument();
+  expect(screen.queryByRole("tab", { name: /Chat/ })).not.toBeInTheDocument();
+});

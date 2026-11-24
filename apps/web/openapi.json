@@ -2187,6 +2187,256 @@
           }
         }
       }
+    },
+    "/api/v1/groups/{group_id}/chats": {
+      "get": {
+        "tags": ["chat"],
+        "summary": "List Threads",
+        "description": "As duas conversas do usuário: com quem ele tirou e com quem o tirou (anônima).",
+        "operationId": "list_threads_api_v1_groups__group_id__chats_get",
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ChatThreadSummary"
+                  },
+                  "title": "Response List Threads Api V1 Groups  Group Id  Chats Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/groups/{group_id}/chats/{thread}/messages": {
+      "get": {
+        "tags": ["chat"],
+        "summary": "List Messages",
+        "operationId": "list_messages_api_v1_groups__group_id__chats__thread__messages_get",
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          },
+          {
+            "name": "thread",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": ["match", "santa"],
+              "type": "string",
+              "title": "Thread"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Página anterior (mais antigas)",
+              "title": "Before"
+            },
+            "description": "Página anterior (mais antigas)"
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Polling: só as mais novas",
+              "title": "After"
+            },
+            "description": "Polling: só as mais novas"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 30,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatMessagePage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["chat"],
+        "summary": "Send Message",
+        "operationId": "send_message_api_v1_groups__group_id__chats__thread__messages_post",
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          },
+          {
+            "name": "thread",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": ["match", "santa"],
+              "type": "string",
+              "title": "Thread"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatMessageIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatMessageOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/groups/{group_id}/chats/{thread}/read": {
+      "post": {
+        "tags": ["chat"],
+        "summary": "Mark Read",
+        "operationId": "mark_read_api_v1_groups__group_id__chats__thread__read_post",
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          },
+          {
+            "name": "thread",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": ["match", "santa"],
+              "type": "string",
+              "title": "Thread"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2258,6 +2508,100 @@
         "type": "object",
         "required": ["bidirectional"],
         "title": "BlockedPairUpdate"
+      },
+      "ChatMessageIn": {
+        "properties": {
+          "body": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Body"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": ["body"],
+        "title": "ChatMessageIn"
+      },
+      "ChatMessageOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "from_me": {
+            "type": "boolean",
+            "title": "From Me"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": ["id", "from_me", "body", "created_at"],
+        "title": "ChatMessageOut"
+      },
+      "ChatMessagePage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ChatMessageOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": ["items", "next_cursor"],
+        "title": "ChatMessagePage"
+      },
+      "ChatThreadSummary": {
+        "properties": {
+          "thread": {
+            "type": "string",
+            "enum": ["match", "santa"],
+            "title": "Thread"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "unread": {
+            "type": "integer",
+            "title": "Unread"
+          },
+          "last_message": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChatMessageOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": ["thread", "title", "unread", "last_message"],
+        "title": "ChatThreadSummary"
       },
       "CircleCreate": {
         "properties": {

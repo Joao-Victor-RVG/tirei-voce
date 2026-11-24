@@ -721,6 +721,61 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/groups/{group_id}/chats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Threads
+         * @description As duas conversas do usuário: com quem ele tirou e com quem o tirou (anônima).
+         */
+        get: operations["list_threads_api_v1_groups__group_id__chats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/groups/{group_id}/chats/{thread}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Messages */
+        get: operations["list_messages_api_v1_groups__group_id__chats__thread__messages_get"];
+        put?: never;
+        /** Send Message */
+        post: operations["send_message_api_v1_groups__group_id__chats__thread__messages_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/groups/{group_id}/chats/{thread}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark Read */
+        post: operations["mark_read_api_v1_groups__group_id__chats__thread__read_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -764,6 +819,48 @@ export interface components {
         BlockedPairUpdate: {
             /** Bidirectional */
             bidirectional: boolean;
+        };
+        /** ChatMessageIn */
+        ChatMessageIn: {
+            /** Body */
+            body: string;
+        };
+        /** ChatMessageOut */
+        ChatMessageOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** From Me */
+            from_me: boolean;
+            /** Body */
+            body: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** ChatMessagePage */
+        ChatMessagePage: {
+            /** Items */
+            items: components["schemas"]["ChatMessageOut"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
+        /** ChatThreadSummary */
+        ChatThreadSummary: {
+            /**
+             * Thread
+             * @enum {string}
+             */
+            thread: "match" | "santa";
+            /** Title */
+            title: string;
+            /** Unread */
+            unread: number;
+            last_message: components["schemas"]["ChatMessageOut"] | null;
         };
         /** CircleCreate */
         CircleCreate: {
@@ -2884,6 +2981,141 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["GiftProgressOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_threads_api_v1_groups__group_id__chats_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatThreadSummary"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_messages_api_v1_groups__group_id__chats__thread__messages_get: {
+        parameters: {
+            query?: {
+                /** @description Página anterior (mais antigas) */
+                before?: string | null;
+                /** @description Polling: só as mais novas */
+                after?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                group_id: string;
+                thread: "match" | "santa";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatMessagePage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_message_api_v1_groups__group_id__chats__thread__messages_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: string;
+                thread: "match" | "santa";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatMessageIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatMessageOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mark_read_api_v1_groups__group_id__chats__thread__read_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: string;
+                thread: "match" | "santa";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

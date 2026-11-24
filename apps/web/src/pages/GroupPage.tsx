@@ -4,8 +4,10 @@ import { ApiError, errorMessage } from "@/api/client";
 import type { Group } from "@/api/types";
 import { EmptyState, ErrorState, PageLoader } from "@/components/ui";
 import { useGroup } from "@/features/groups/api";
-import { isOrganizer } from "@/features/groups/status";
+import { useChatThreads } from "@/features/groups/chatApi";
+import { isDrawn, isOrganizer } from "@/features/groups/status";
 import { StatusBadge } from "@/features/groups/StatusBadge";
+import { ChatTab } from "@/features/groups/tabs/ChatTab";
 import { DrawTab } from "@/features/groups/tabs/DrawTab";
 import { OverviewTab } from "@/features/groups/tabs/OverviewTab";
 import { ParticipantsTab } from "@/features/groups/tabs/ParticipantsTab";
@@ -14,14 +16,15 @@ import { WishlistTab } from "@/features/groups/tabs/WishlistTab";
 import { cx } from "@/lib/cx";
 import { themeStyle, themeVars } from "@/lib/themes";
 
-type TabId = "overview" | "participants" | "wishlist" | "rules" | "draw";
+type TabId = "overview" | "participants" | "wishlist" | "rules" | "draw" | "chat";
 
-const TABS: Array<{ id: TabId; label: string; organizerOnly?: boolean }> = [
+const TABS: Array<{ id: TabId; label: string; organizerOnly?: boolean; afterDraw?: boolean }> = [
   { id: "overview", label: "Visão geral" },
   { id: "participants", label: "Participantes" },
   { id: "wishlist", label: "Minha lista" },
   { id: "rules", label: "Regras", organizerOnly: true },
   { id: "draw", label: "Sorteio" },
+  { id: "chat", label: "Chat", afterDraw: true },
 ];
 
 export function GroupPage() {
@@ -48,7 +51,10 @@ export function GroupPage() {
 function GroupView({ group }: { group: Group }) {
   const [params, setParams] = useSearchParams();
   const organizer = isOrganizer(group);
-  const tabs = TABS.filter((tab) => !tab.organizerOnly || organizer);
+  const drawn = isDrawn(group.status);
+  const tabs = TABS.filter((tab) => (!tab.organizerOnly || organizer) && (!tab.afterDraw || drawn));
+  const threads = useChatThreads(group.id, drawn);
+  const unread = threads.data?.reduce((sum, t) => sum + t.unread, 0) ?? 0;
   const defaultTab: TabId = group.status === "DRAWN" ? "draw" : "overview";
   const requested = params.get("tab") as TabId | null;
   const active = tabs.some((t) => t.id === requested) ? (requested as TabId) : defaultTab;
@@ -94,6 +100,14 @@ function GroupView({ group }: { group: Group }) {
               )}
             >
               {tab.label}
+              {tab.id === "chat" && unread > 0 && (
+                <span
+                  className="ml-1.5 rounded-full bg-(--accent) px-1.5 text-xs text-white"
+                  aria-label={`${unread} não lidas`}
+                >
+                  {unread}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -105,6 +119,7 @@ function GroupView({ group }: { group: Group }) {
         {active === "wishlist" && <WishlistTab group={group} />}
         {active === "rules" && organizer && <RulesTab group={group} />}
         {active === "draw" && <DrawTab group={group} />}
+        {active === "chat" && drawn && <ChatTab group={group} />}
       </section>
     </div>
   );
