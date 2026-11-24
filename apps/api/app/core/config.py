@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -17,8 +17,24 @@ class Settings(BaseSettings):
     db_max_overflow: int = Field(default=10, ge=0)
     redis_url: str = "redis://localhost:6379/0"
 
+    # Segredos: os defaults só servem para dev/test; em produção é obrigatório definir.
+    jwt_secret: str = "dev-insecure-jwt-secret-change-me-0123456789"  # noqa: S105
+    access_token_ttl_minutes: int = 15
+    refresh_token_ttl_days: int = 30
+    cookie_secure: bool = True
+    cookie_domain: str | None = None
+
     sentry_dsn: str | None = None
     sentry_traces_sample_rate: float = 0.0
+
+    @model_validator(mode="after")
+    def _check_production_secrets(self) -> "Settings":
+        if self.is_production:
+            if self.jwt_secret.startswith("dev-insecure") or len(self.jwt_secret) < 32:
+                raise ValueError("JWT_SECRET precisa ter pelo menos 32 caracteres em produção")
+            if not self.cookie_secure:
+                raise ValueError("COOKIE_SECURE precisa ser true em produção")
+        return self
 
     @property
     def is_production(self) -> bool:

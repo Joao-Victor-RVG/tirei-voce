@@ -7,6 +7,7 @@ x-api-env: &api-env
   environment:
     DATABASE_URL: postgresql+asyncpg://tirei:tirei@postgres:5432/tirei_voce
     REDIS_URL: redis://redis:6379/0
+    COOKIE_SECURE: "false" # dev roda em http
 
 services:
   postgres:

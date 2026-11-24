@@ -65,6 +65,7 @@ testpaths = ["tests"]
 
 [tool.coverage.run]
 source = ["app"]
+concurrency = ["greenlet", "thread"]
 omit = ["app/workers/*"]
 
 [tool.coverage.report]

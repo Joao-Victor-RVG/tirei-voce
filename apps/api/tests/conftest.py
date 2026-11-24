@@ -10,6 +10,7 @@ _BASE_DB = os.environ.get(
 os.environ["DATABASE_URL"] = _BASE_DB
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/15")
 os.environ["ENVIRONMENT"] = "test"
+os.environ["COOKIE_SECURE"] = "false"  # o cliente de teste usa http
 
 import asyncpg
 import httpx
@@ -64,8 +65,24 @@ async def _clean_state() -> AsyncIterator[None]:
     await get_redis().flushdb()
 
 
+def make_client() -> httpx.AsyncClient:
+    """Cliente que, como o frontend, reenvia o cookie CSRF no header X-CSRF-Token."""
+
+    async def add_csrf(request: httpx.Request) -> None:
+        token = http.cookies.get("tv_csrf")
+        if token and "X-CSRF-Token" not in request.headers:
+            request.headers["X-CSRF-Token"] = token
+
+    http = httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://testserver",
+        event_hooks={"request": [add_csrf]},
+    )
+    return http
+
+
 @pytest.fixture
 async def client() -> AsyncIterator[httpx.AsyncClient]:
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as c:
+    async with make_client() as c:
+        await c.get("/api/v1/auth/csrf")
         yield c
