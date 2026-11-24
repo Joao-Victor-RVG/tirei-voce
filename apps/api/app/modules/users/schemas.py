@@ -21,6 +21,7 @@ class MeOut(BaseModel):
     shoe_size: str | None
     has_password: bool
     has_google: bool
+    email_reminders: bool
 
     @classmethod
     def from_user(cls, user: User) -> "MeOut":
@@ -34,6 +35,7 @@ class MeOut(BaseModel):
             shoe_size=user.shoe_size,
             has_password=user.password_hash is not None,
             has_google=user.google_sub is not None,
+            email_reminders=user.email_reminders,
         )
 
 
@@ -44,3 +46,4 @@ class MeUpdate(BaseModel):
     avatar_url: HttpUrl | None = Field(default=None, max_length=2048)
     shirt_size: Size | None = None
     shoe_size: Size | None = None
+    email_reminders: bool | None = None

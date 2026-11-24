@@ -1037,6 +1037,8 @@ export interface components {
             event_maps_url?: string | null;
             /** Join Deadline At */
             join_deadline_at?: string | null;
+            /** Wishlist Deadline At */
+            wishlist_deadline_at?: string | null;
             /** Max Participants */
             max_participants?: number | null;
             /** Prefer Single Cycle */
@@ -1074,6 +1076,8 @@ export interface components {
             event_maps_url: string | null;
             /** Join Deadline At */
             join_deadline_at: string | null;
+            /** Wishlist Deadline At */
+            wishlist_deadline_at: string | null;
             status: components["schemas"]["GroupStatus"];
             /** Invite Code */
             invite_code: string;
@@ -1138,6 +1142,8 @@ export interface components {
             event_maps_url?: string | null;
             /** Join Deadline At */
             join_deadline_at?: string | null;
+            /** Wishlist Deadline At */
+            wishlist_deadline_at?: string | null;
             /** Max Participants */
             max_participants?: number | null;
             /** Prefer Single Cycle */
@@ -1234,6 +1240,8 @@ export interface components {
             has_password: boolean;
             /** Has Google */
             has_google: boolean;
+            /** Email Reminders */
+            email_reminders: boolean;
         };
         /** MeUpdate */
         MeUpdate: {
@@ -1245,6 +1253,8 @@ export interface components {
             shirt_size?: string | null;
             /** Shoe Size */
             shoe_size?: string | null;
+            /** Email Reminders */
+            email_reminders?: boolean | null;
         };
         /** MessageOut */
         MessageOut: {

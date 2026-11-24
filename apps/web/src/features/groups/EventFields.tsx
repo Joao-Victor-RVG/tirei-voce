@@ -50,6 +50,13 @@ export function EventFields<T extends EventValues>({ register, errors }: Props<T
       >
         {(id) => <Input id={id} type="datetime-local" {...reg("join_deadline_at")} />}
       </Field>
+      <Field
+        label="Prazo para montar a lista de desejos (opcional)"
+        error={err.wishlist_deadline_at?.message}
+        hint="Um dia antes, lembramos quem ainda está com a lista vazia."
+      >
+        {(id) => <Input id={id} type="datetime-local" {...reg("wishlist_deadline_at")} />}
+      </Field>
       <Field label="Regras e recados (opcional)" error={err.description?.message}>
         {(id) => (
           <TextArea

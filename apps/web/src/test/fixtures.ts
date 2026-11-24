@@ -10,6 +10,7 @@ export const ME: Me = {
   shoe_size: null,
   has_password: true,
   has_google: false,
+  email_reminders: true,
 };
 
 export const THEMES = [
@@ -36,6 +37,7 @@ export function group(overrides: Partial<Group> = {}): Group {
     event_location: "Casa da vó",
     event_maps_url: null,
     join_deadline_at: null,
+    wishlist_deadline_at: null,
     status: "OPEN",
     invite_code: "abcdefghijkl",
     max_participants: 100,

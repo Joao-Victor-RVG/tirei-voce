@@ -46,3 +46,14 @@ def reset_password(to: str, name: str, url: str) -> EmailMessage:
         html=_layout(title, greeting, body, "Criar nova senha", url, footer),
         text=f"{greeting}\n\n{body}\n\nCrie uma nova senha: {url}\n\n{footer}",
     )
+
+
+def reminder(to: str, name: str, subject: str, headline: str, body: str, url: str) -> EmailMessage:
+    greeting = f"Oi, {name}!"
+    footer = "Você recebe este lembrete porque participa do grupo. Dá para desligar no seu perfil."
+    return EmailMessage(
+        to=to,
+        subject=subject,
+        html=_layout(headline, greeting, body, "Abrir o grupo", url, footer),
+        text=f"{greeting}\n\n{body}\n\nAbrir o grupo: {url}\n\n{footer}",
+    )

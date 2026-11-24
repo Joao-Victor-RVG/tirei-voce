@@ -13,6 +13,7 @@ const ME = {
   shoe_size: null,
   has_password: true,
   has_google: false,
+  email_reminders: true,
 };
 
 afterEach(() => {
@@ -241,4 +242,26 @@ test("perfil esconde notificações quando o push está desligado no servidor", 
   renderRoute("/profile");
   expect(await screen.findByRole("heading", { name: "Meu perfil" })).toBeInTheDocument();
   expect(screen.queryByText("Notificações neste aparelho")).not.toBeInTheDocument();
+});
+
+test("perfil desliga lembretes por e-mail", async () => {
+  const me = { ...ME, email_verified: true, email_reminders: true };
+  const calls = mockApi((url, init) => {
+    if (url.pathname.endsWith("/me") && init.method === "PATCH") {
+      Object.assign(me, JSON.parse(String(init.body)));
+      return { body: me };
+    }
+    if (url.pathname.endsWith("/me")) return { body: me };
+    if (url.pathname.endsWith("/push/config"))
+      return { body: { enabled: false, public_key: null, subscribed: false } };
+  });
+  renderRoute("/profile");
+  const user = userEvent.setup();
+  const toggle = await screen.findByRole("checkbox", { name: /Lembretes por e-mail/ });
+  expect(toggle).toBeChecked();
+  await user.click(toggle);
+  await user.click(screen.getByRole("button", { name: "Salvar" }));
+  await waitFor(() =>
+    expect(calls.find((c) => c.method === "PATCH")?.body).toMatchObject({ email_reminders: false }),
+  );
 });

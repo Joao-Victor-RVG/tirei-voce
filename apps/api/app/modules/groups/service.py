@@ -299,6 +299,12 @@ class GroupService:
         changed = data.model_fields_set
         if "event_at" in changed and data.event_at and data.event_at <= now:
             raise UnprocessableError("A data do evento precisa ser no futuro.", code="invalid_date")
+        if (
+            "wishlist_deadline_at" in changed
+            and data.wishlist_deadline_at
+            and data.wishlist_deadline_at <= now
+        ):
+            raise UnprocessableError("O prazo da lista precisa ser no futuro.", code="invalid_date")
         if "join_deadline_at" in changed and data.join_deadline_at and data.join_deadline_at <= now:
             raise UnprocessableError(
                 "O prazo de inscrição precisa ser no futuro.", code="invalid_date"
@@ -314,6 +320,14 @@ class GroupService:
         if group.event_at and group.join_deadline_at and group.join_deadline_at > group.event_at:
             raise UnprocessableError(
                 "O prazo de inscrição deve ser antes do evento.", code="invalid_date"
+            )
+        if (
+            group.event_at
+            and group.wishlist_deadline_at
+            and group.wishlist_deadline_at > group.event_at
+        ):
+            raise UnprocessableError(
+                "O prazo da lista de desejos deve ser antes do evento.", code="invalid_date"
             )
 
     async def _to_out(self, membership: Membership) -> GroupOut:
@@ -331,6 +345,7 @@ class GroupService:
             event_location=group.event_location,
             event_maps_url=group.event_maps_url,
             join_deadline_at=group.join_deadline_at,
+            wishlist_deadline_at=group.wishlist_deadline_at,
             status=group.status,
             invite_code=group.invite_code,
             max_participants=group.max_participants,

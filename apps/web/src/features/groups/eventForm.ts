@@ -23,6 +23,7 @@ export const eventSchema = z
         "Cole um link que comece com https://",
       ),
     join_deadline_at: z.string(),
+    wishlist_deadline_at: z.string(),
     description: z.string().trim().max(2000, "Máximo de 2000 caracteres."),
   })
   .superRefine((v, ctx) => {
@@ -48,6 +49,21 @@ export const eventSchema = z
         message: "Escolha uma data no futuro.",
       });
     }
+    const wishlistDeadline = localInputToIso(v.wishlist_deadline_at);
+    if (wishlistDeadline && Date.parse(wishlistDeadline) <= now) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["wishlist_deadline_at"],
+        message: "Escolha uma data no futuro.",
+      });
+    }
+    if (eventAt && wishlistDeadline && Date.parse(wishlistDeadline) > Date.parse(eventAt)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["wishlist_deadline_at"],
+        message: "O prazo precisa ser antes do evento.",
+      });
+    }
     if (eventAt && deadline && Date.parse(deadline) > Date.parse(eventAt)) {
       ctx.addIssue({
         code: "custom",
@@ -66,6 +82,7 @@ export const emptyEvent: EventValues = {
   event_location: "",
   event_maps_url: "",
   join_deadline_at: "",
+  wishlist_deadline_at: "",
   description: "",
 };
 
@@ -77,6 +94,7 @@ export function eventValuesFromGroup(group: Group): EventValues {
     event_location: group.event_location ?? "",
     event_maps_url: group.event_maps_url ?? "",
     join_deadline_at: isoToLocalInput(group.join_deadline_at),
+    wishlist_deadline_at: isoToLocalInput(group.wishlist_deadline_at),
     description: group.description ?? "",
   };
 }
@@ -89,6 +107,7 @@ type EventPayload = Pick<
   | "event_location"
   | "event_maps_url"
   | "join_deadline_at"
+  | "wishlist_deadline_at"
   | "description"
 >;
 
@@ -100,6 +119,7 @@ export function eventPayload(v: EventValues): EventPayload {
     event_location: v.event_location || null,
     event_maps_url: v.event_maps_url || null,
     join_deadline_at: localInputToIso(v.join_deadline_at),
+    wishlist_deadline_at: localInputToIso(v.wishlist_deadline_at),
     description: v.description || null,
   };
 }

@@ -1,12 +1,15 @@
 import logging
 from typing import Any, ClassVar
 
+from arq import cron
+
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.core.queue import redis_settings
 from app.core.sentry import init_sentry
 from app.modules.notifications.email import EmailMessage, build_email_sender
 from app.workers.notifications import push_chat_message, push_draw_done
+from app.workers.reminders import send_due_reminders
 
 logger = logging.getLogger(__name__)
 
@@ -30,4 +33,8 @@ class WorkerSettings:
     redis_settings = redis_settings()
     max_tries = 5
     job_timeout = 60
-    keep_result = 0  # não guarda resultados (nem argumentos) depois de executar
+    keep_result = 0
+    # A cada 5 minutos; cada lembrete é "reivindicado" no banco, então rodar em N workers é seguro.
+    cron_jobs: ClassVar[list[Any]] = [
+        cron(send_due_reminders, minute=set(range(0, 60, 5)), run_at_startup=True, timeout=240)
+    ]  # não guarda resultados (nem argumentos) depois de executar

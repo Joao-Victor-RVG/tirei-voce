@@ -31,7 +31,7 @@ def configure_logging(level: str) -> None:
     root = logging.getLogger()
     root.handlers = [handler]
     root.setLevel(level.upper())
-    for name in ("uvicorn", "uvicorn.error"):
+    for name in ("uvicorn", "uvicorn.error", "arq"):
         logging.getLogger(name).handlers = []
         logging.getLogger(name).propagate = True
     # O log de acesso é emitido pelo nosso middleware (com request_id).

@@ -11,6 +11,8 @@ class UserService:
 
     async def update_me(self, user: User, data: MeUpdate) -> User:
         changes = data.model_dump(exclude_unset=True)
+        if "email_reminders" in changes and changes["email_reminders"] is None:
+            changes.pop("email_reminders")
         if "name" in changes and changes["name"] is None:
             raise UnprocessableError("O nome não pode ficar vazio.", code="name_required")
         for field, value in changes.items():

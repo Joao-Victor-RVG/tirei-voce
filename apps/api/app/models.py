@@ -7,6 +7,7 @@ from app.modules.draws.models import Draw, DrawAssignment
 from app.modules.groups.models import Group, GroupTheme
 from app.modules.notifications.models import PushSubscription
 from app.modules.participants.models import Participant
+from app.modules.reminders.models import SentReminder
 from app.modules.rules.models import BlockedPair, ExclusionCircle, ExclusionCircleMember
 from app.modules.users.models import User
 from app.modules.wishlist.models import ParticipantPreferences, WishlistItem
@@ -26,6 +27,7 @@ __all__ = [
     "ParticipantPreferences",
     "PushSubscription",
     "RefreshToken",
+    "SentReminder",
     "User",
     "WishlistItem",
 ]

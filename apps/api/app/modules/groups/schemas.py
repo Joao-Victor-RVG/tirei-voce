@@ -42,6 +42,7 @@ class _GroupFields(BaseModel):
     event_location: Location | None = None
     event_maps_url: HttpUrl | None = None
     join_deadline_at: AwareDatetime | None = None
+    wishlist_deadline_at: AwareDatetime | None = None
     max_participants: Annotated[int, Field(ge=3, le=200)] | None = None
     prefer_single_cycle: bool | None = None
 
@@ -52,6 +53,12 @@ class _GroupFields(BaseModel):
             raise ValueError("O valor máximo deve ser maior ou igual ao mínimo.")
         if self.event_at and self.join_deadline_at and self.join_deadline_at > self.event_at:
             raise ValueError("O prazo de inscrição deve ser antes do evento.")
+        if (
+            self.event_at
+            and self.wishlist_deadline_at
+            and self.wishlist_deadline_at > self.event_at
+        ):
+            raise ValueError("O prazo da lista de desejos deve ser antes do evento.")
         return self
 
 
@@ -84,6 +91,7 @@ class GroupOut(BaseModel):
     event_location: str | None
     event_maps_url: str | None
     join_deadline_at: datetime | None
+    wishlist_deadline_at: datetime | None
     status: GroupStatus
     invite_code: str
     max_participants: int

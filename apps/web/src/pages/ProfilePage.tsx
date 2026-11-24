@@ -12,6 +12,7 @@ const schema = z.object({
   name: z.string().trim().min(1, "Informe seu nome.").max(100),
   shirt_size: z.string().trim().max(10, "Máximo de 10 caracteres."),
   shoe_size: z.string().trim().max(10, "Máximo de 10 caracteres."),
+  email_reminders: z.boolean(),
 });
 type Values = z.infer<typeof schema>;
 
@@ -29,6 +30,7 @@ function ProfileForm({ me }: { me: NonNullable<ReturnType<typeof useMe>["data"]>
       name: me.name,
       shirt_size: me.shirt_size ?? "",
       shoe_size: me.shoe_size ?? "",
+      email_reminders: me.email_reminders,
     },
   });
   const { errors, isSubmitting } = form.formState;
@@ -39,6 +41,7 @@ function ProfileForm({ me }: { me: NonNullable<ReturnType<typeof useMe>["data"]>
         name: values.name,
         shirt_size: values.shirt_size || null,
         shoe_size: values.shoe_size || null,
+        email_reminders: values.email_reminders,
       });
     } catch (error) {
       applyApiError(error, form.setError);
@@ -78,6 +81,19 @@ function ProfileForm({ me }: { me: NonNullable<ReturnType<typeof useMe>["data"]>
               )}
             </Field>
           </div>
+          <label className="flex items-start gap-3 rounded-2xl bg-black/[0.03] p-3">
+            <input
+              type="checkbox"
+              className="mt-1 size-5 accent-(--accent)"
+              {...form.register("email_reminders")}
+            />
+            <span>
+              <span className="block font-bold">Lembretes por e-mail</span>
+              <span className="block text-sm text-gray-600">
+                Prazo da lista de desejos, 1 dia e 2 horas antes do evento.
+              </span>
+            </span>
+          </label>
           {errors.root && <Alert>{errors.root.message}</Alert>}
           {update.isSuccess && !form.formState.isDirty && (
             <Alert tone="success">Perfil salvo!</Alert>

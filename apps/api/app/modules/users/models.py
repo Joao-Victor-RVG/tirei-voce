@@ -18,6 +18,7 @@ class User(UUIDPrimaryKey, Timestamps, Base):
     shirt_size: Mapped[str | None] = mapped_column(String(10))
     shoe_size: Mapped[str | None] = mapped_column(String(10))
     is_active: Mapped[bool] = mapped_column(default=True, server_default=true())
+    email_reminders: Mapped[bool] = mapped_column(default=True, server_default=true())
 
     __table_args__ = (Index("uq_users_email_lower", func.lower(email), unique=True),)
 

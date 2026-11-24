@@ -38,6 +38,7 @@ const STEP_FIELDS: Array<Array<keyof Values>> = [
     "event_location",
     "event_maps_url",
     "join_deadline_at",
+    "wishlist_deadline_at",
     "description",
   ],
   [],
