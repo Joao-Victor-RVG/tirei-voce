@@ -1,6 +1,7 @@
 import asyncio
 import os
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
+from contextlib import AsyncExitStack
 from urllib.parse import urlsplit, urlunsplit
 
 # Precisa vir antes de qualquer import do app: as settings são lidas uma vez.
@@ -19,12 +20,16 @@ from alembic import command
 from alembic.config import Config
 from sqlalchemy import text
 
-from app.core.db import get_engine
+from app.core.db import get_engine, get_sessionmaker
 from app.core.redis import get_redis
 from app.main import app
 from app.models import Base
 from app.modules.notifications.email import EmailMessage
 from app.modules.notifications.service import get_email_outbox
+from app.seed import seed_themes
+
+# Dados de referência: semeados uma vez e preservados entre os testes.
+_PRESERVED_TABLES = {"group_themes"}
 
 
 class MemoryOutbox:
@@ -63,6 +68,8 @@ def _run_migrations(url: str) -> None:
 async def _database() -> AsyncIterator[None]:
     await _ensure_database(_BASE_DB)
     await asyncio.to_thread(_run_migrations, _BASE_DB)
+    async with get_sessionmaker()() as session:
+        await seed_themes(session)
     yield
     await get_engine().dispose()
     await get_redis().aclose()
@@ -79,7 +86,9 @@ def outbox() -> Iterator[MemoryOutbox]:
 @pytest.fixture(autouse=True)
 async def _clean_state() -> AsyncIterator[None]:
     yield
-    tables = [t.name for t in reversed(Base.metadata.sorted_tables)]
+    tables = [
+        t.name for t in reversed(Base.metadata.sorted_tables) if t.name not in _PRESERVED_TABLES
+    ]
     if tables:
         async with get_engine().begin() as conn:
             await conn.execute(text(f"TRUNCATE {', '.join(tables)} CASCADE"))
@@ -107,3 +116,23 @@ async def client() -> AsyncIterator[httpx.AsyncClient]:
     async with make_client() as c:
         await c.get("/api/v1/auth/csrf")
         yield c
+
+
+UserClientFactory = Callable[..., Awaitable[httpx.AsyncClient]]
+
+
+@pytest.fixture
+async def user_client() -> AsyncIterator[UserClientFactory]:
+    """Cria clientes já logados (e verificados), cada um com seu próprio usuário."""
+    from tests.helpers import register
+
+    async with AsyncExitStack() as stack:
+
+        async def factory(name: str = "Ana", *, verified: bool = True) -> httpx.AsyncClient:
+            c = await stack.enter_async_context(make_client())
+            await c.get("/api/v1/auth/csrf")
+            email = f"{name.lower().replace(' ', '.')}@example.com"
+            await register(c, email, name=name, verified=verified)
+            return c
+
+        yield factory

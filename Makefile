@@ -2,7 +2,7 @@ COMPOSE := docker compose -f infra/docker-compose.yml
 API := cd apps/api &&
 WEB := cd apps/web &&
 
-.PHONY: dev down logs migrate migration test test-api test-web lint lint-api lint-web format help
+.PHONY: dev down logs migrate migration seed test test-api test-web lint lint-api lint-web format help
 
 dev: ## Sobe tudo (postgres, redis, api, worker, web) com hot reload
 	$(COMPOSE) up --build
@@ -15,6 +15,9 @@ logs: ## Acompanha os logs
 
 migrate: ## Aplica as migrations (com o compose rodando)
 	$(COMPOSE) exec api alembic upgrade head
+
+seed: ## Carrega os dados iniciais (temas); idempotente
+	$(COMPOSE) exec api python -m app.seed
 
 migration: ## Gera uma migration: make migration m="descricao"
 	$(COMPOSE) exec api alembic revision --autogenerate -m "$(m)"

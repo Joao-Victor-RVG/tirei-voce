@@ -2,6 +2,8 @@
 
 from app.core.db import Base
 from app.modules.auth.models import EmailToken, RefreshToken
+from app.modules.groups.models import Group, GroupTheme
+from app.modules.participants.models import Participant
 from app.modules.users.models import User
 
-__all__ = ["Base", "EmailToken", "RefreshToken", "User"]
+__all__ = ["Base", "EmailToken", "Group", "GroupTheme", "Participant", "RefreshToken", "User"]

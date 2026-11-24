@@ -1,5 +1,5 @@
 import re
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import httpx
@@ -43,3 +43,32 @@ def token_from(message_text: str) -> str:
     match = re.search(r"token=([A-Za-z0-9_-]+)", message_text)
     assert match, message_text
     return match.group(1)
+
+
+def future(days: int = 30) -> str:
+    return (datetime.now(UTC) + timedelta(days=days)).isoformat()
+
+
+async def create_group(
+    client: httpx.AsyncClient, *, open_: bool = False, **overrides: Any
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "theme_slug": "amigo-secreto",
+        "title": "Natal da Família",
+        "min_value_cents": 5000,
+        "max_value_cents": 10000,
+        "event_at": future(30),
+        "event_location": "Casa da vó",
+    } | overrides
+    response = await client.post("/api/v1/groups", json=payload)
+    assert response.status_code == 201, response.text
+    group: dict[str, Any] = response.json()
+    if open_:
+        opened = await client.post(f"/api/v1/groups/{group['id']}/open")
+        assert opened.status_code == 200, opened.text
+        group = opened.json()
+    return group
+
+
+async def join(client: httpx.AsyncClient, invite_code: str) -> httpx.Response:
+    return await client.post(f"/api/v1/invites/{invite_code}/join")
