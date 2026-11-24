@@ -8,6 +8,7 @@ from app.core.logging import configure_logging
 from app.core.queue import redis_settings
 from app.core.sentry import init_sentry
 from app.modules.notifications.email import EmailMessage, build_email_sender
+from app.workers.draws import scheduled_draws
 from app.workers.notifications import push_chat_message, push_draw_done
 from app.workers.reminders import send_due_reminders
 
@@ -36,5 +37,7 @@ class WorkerSettings:
     keep_result = 0
     # A cada 5 minutos; cada lembrete é "reivindicado" no banco, então rodar em N workers é seguro.
     cron_jobs: ClassVar[list[Any]] = [
-        cron(send_due_reminders, minute=set(range(0, 60, 5)), run_at_startup=True, timeout=240)
+        cron(send_due_reminders, minute=set(range(0, 60, 5)), run_at_startup=True, timeout=240),
+        # Todo minuto: o grupo é travado com FOR UPDATE, então dois workers não sorteiam duas vezes.
+        cron(scheduled_draws, second=0, run_at_startup=True, timeout=55),
     ]  # não guarda resultados (nem argumentos) depois de executar

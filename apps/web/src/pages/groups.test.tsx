@@ -497,3 +497,33 @@ test("aba Chat só aparece depois do sorteio", async () => {
   expect(await screen.findByRole("tab", { name: "Visão geral" })).toBeInTheDocument();
   expect(screen.queryByRole("tab", { name: /Chat/ })).not.toBeInTheDocument();
 });
+
+test("organização agenda o sorteio automático", async () => {
+  let scheduled: string | null = null;
+  const calls = mockApi((url, init) => {
+    const path = url.pathname.replace("/api/v1", "");
+    if (path === "/me") return json(ME);
+    if (path === "/groups/g1" && init.method === "PATCH") {
+      scheduled = JSON.parse(String(init.body)).draw_scheduled_at;
+      return json(group({ status: "CLOSED", draw_scheduled_at: scheduled }));
+    }
+    if (path === "/groups/g1")
+      return json(group({ status: "CLOSED", draw_scheduled_at: scheduled }));
+    if (path === "/groups/g1/draw/validate")
+      return json({
+        possible: true,
+        participant_count: 4,
+        min_participants: 3,
+        message: "Tudo certo!",
+        most_constrained: [],
+      });
+  });
+  renderRoute("/groups/g1?tab=draw");
+  const user = userEvent.setup();
+  await user.type(await screen.findByLabelText("Data e hora do sorteio"), "2099-12-20T20:00");
+  await user.click(screen.getByRole("button", { name: "Agendar sorteio" }));
+  expect(await screen.findByText(/Agendado para/)).toBeInTheDocument();
+  expect(calls.find((c) => c.method === "PATCH")?.body).toEqual({
+    draw_scheduled_at: "2099-12-20T23:00:00.000Z",
+  });
+});

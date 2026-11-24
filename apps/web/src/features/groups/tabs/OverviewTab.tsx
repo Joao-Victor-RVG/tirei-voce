@@ -63,6 +63,13 @@ export function OverviewTab({ group }: { group: Group }) {
               }
             />
             <Detail icon="💸" label="Valor do presente" value={range ?? "Sem valor definido"} />
+            {group.draw_scheduled_at && (
+              <Detail
+                icon="🎲"
+                label="Sorteio automático"
+                value={formatDateTime(group.draw_scheduled_at)}
+              />
+            )}
             {group.wishlist_deadline_at && (
               <Detail
                 icon="📝"

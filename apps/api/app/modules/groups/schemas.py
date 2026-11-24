@@ -43,6 +43,7 @@ class _GroupFields(BaseModel):
     event_maps_url: HttpUrl | None = None
     join_deadline_at: AwareDatetime | None = None
     wishlist_deadline_at: AwareDatetime | None = None
+    draw_scheduled_at: AwareDatetime | None = None
     max_participants: Annotated[int, Field(ge=3, le=200)] | None = None
     prefer_single_cycle: bool | None = None
 
@@ -59,6 +60,8 @@ class _GroupFields(BaseModel):
             and self.wishlist_deadline_at > self.event_at
         ):
             raise ValueError("O prazo da lista de desejos deve ser antes do evento.")
+        if self.event_at and self.draw_scheduled_at and self.draw_scheduled_at > self.event_at:
+            raise ValueError("O sorteio automático deve ser antes do evento.")
         return self
 
 
@@ -92,6 +95,7 @@ class GroupOut(BaseModel):
     event_maps_url: str | None
     join_deadline_at: datetime | None
     wishlist_deadline_at: datetime | None
+    draw_scheduled_at: datetime | None
     status: GroupStatus
     invite_code: str
     max_participants: int

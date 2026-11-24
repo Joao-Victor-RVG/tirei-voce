@@ -1,6 +1,7 @@
 import hashlib
 import logging
 import uuid
+from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,6 +21,7 @@ from app.modules.draws.schemas import (
     MyMatchOut,
 )
 from app.modules.groups.models import Group, GroupStatus
+from app.modules.groups.repository import GroupRepository
 from app.modules.groups.service import GroupAccess, Membership, ensure_transition, transition
 from app.modules.notifications import events
 from app.modules.participants.models import Participant
@@ -38,10 +40,18 @@ IMPOSSIBLE_MESSAGE = (
 )
 
 
+@dataclass(frozen=True)
+class ScheduledDrawResult:
+    group_id: uuid.UUID
+    done: bool
+    error: str | None
+
+
 class DrawService:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
         self.access = GroupAccess(session)
+        self.groups = GroupRepository(session)
         self.participants = ParticipantRepository(session)
         self.rules = RulesRepository(session)
         self.draws = DrawRepository(session)
@@ -80,8 +90,37 @@ class DrawService:
             if idem_key and (cached := await get_redis().get(idem_key)):
                 return DrawOut.model_validate_json(cached)
             raise ConflictError("O sorteio deste grupo já foi feito.", code="already_drawn")
-        ensure_transition(group, GroupStatus.DRAWN)
+        result = await self._perform(group, executed_by=user.id)
+        if idem_key:
+            await get_redis().set(idem_key, result.model_dump_json(), ex=IDEMPOTENCY_TTL_SECONDS)
+        return result
 
+    async def execute_scheduled(self, group_id: uuid.UUID, now: datetime) -> ScheduledDrawResult:
+        """Sorteio automático (worker). Roda em nome de quem criou o grupo."""
+        group = await self.groups.get(group_id, for_update=True)
+        if (
+            group is None
+            or group.draw_scheduled_at is None
+            or group.draw_scheduled_at > now
+            or group.status not in (GroupStatus.OPEN, GroupStatus.CLOSED)
+        ):
+            await self.session.rollback()
+            return ScheduledDrawResult(group_id=group_id, done=False, error=None)
+        group.draw_scheduled_at = None  # tenta uma vez só; em caso de erro a organização é avisada
+        try:
+            await self._perform(group, executed_by=group.owner_id)
+        except UnprocessableError as exc:
+            await self.session.rollback()
+            group = await self.groups.get(group_id, for_update=True)
+            if group is not None:
+                group.draw_scheduled_at = None
+            await self.session.commit()
+            return ScheduledDrawResult(group_id=group_id, done=False, error=exc.message)
+        return ScheduledDrawResult(group_id=group_id, done=True, error=None)
+
+    async def _perform(self, group: Group, *, executed_by: uuid.UUID) -> DrawOut:
+        """Núcleo do sorteio: o grupo já deve estar travado (FOR UPDATE) pelo chamador."""
+        ensure_transition(group, GroupStatus.DRAWN)
         people, rules = await self._rules(group)
         try:
             assignment = engine.draw(rules, prefer_single_cycle=group.prefer_single_cycle)
@@ -107,7 +146,7 @@ class DrawService:
             id=draw_id,
             group_id=group.id,
             version=await self.draws.next_version(group.id),
-            executed_by=user.id,
+            executed_by=executed_by,
             executed_at=datetime.now(UTC),
             seed_hash=crypto.assignment_digest(draw_id, assignment),
         )
@@ -121,6 +160,7 @@ class DrawService:
             for giver, receiver in assignment.items()
         ]
         await self.draws.add(draw, assignments)
+        group.draw_scheduled_at = None
         transition(group, GroupStatus.DRAWN)
         await self.session.commit()
 
@@ -130,8 +170,6 @@ class DrawService:
             executed_at=draw.executed_at,
             participant_count=len(people),
         )
-        if idem_key:
-            await get_redis().set(idem_key, result.model_dump_json(), ex=IDEMPOTENCY_TTL_SECONDS)
         await events.draw_done(group.id)
         logger.info(
             "draw_executed",

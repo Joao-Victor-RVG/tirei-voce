@@ -1039,6 +1039,8 @@ export interface components {
             join_deadline_at?: string | null;
             /** Wishlist Deadline At */
             wishlist_deadline_at?: string | null;
+            /** Draw Scheduled At */
+            draw_scheduled_at?: string | null;
             /** Max Participants */
             max_participants?: number | null;
             /** Prefer Single Cycle */
@@ -1078,6 +1080,8 @@ export interface components {
             join_deadline_at: string | null;
             /** Wishlist Deadline At */
             wishlist_deadline_at: string | null;
+            /** Draw Scheduled At */
+            draw_scheduled_at: string | null;
             status: components["schemas"]["GroupStatus"];
             /** Invite Code */
             invite_code: string;
@@ -1144,6 +1148,8 @@ export interface components {
             join_deadline_at?: string | null;
             /** Wishlist Deadline At */
             wishlist_deadline_at?: string | null;
+            /** Draw Scheduled At */
+            draw_scheduled_at?: string | null;
             /** Max Participants */
             max_participants?: number | null;
             /** Prefer Single Cycle */

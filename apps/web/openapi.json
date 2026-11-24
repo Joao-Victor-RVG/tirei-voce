@@ -3087,6 +3087,18 @@
             ],
             "title": "Wishlist Deadline At"
           },
+          "draw_scheduled_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draw Scheduled At"
+          },
           "max_participants": {
             "anyOf": [
               {
@@ -3248,6 +3260,18 @@
             ],
             "title": "Wishlist Deadline At"
           },
+          "draw_scheduled_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draw Scheduled At"
+          },
           "status": {
             "$ref": "#/components/schemas/GroupStatus"
           },
@@ -3299,6 +3323,7 @@
           "event_maps_url",
           "join_deadline_at",
           "wishlist_deadline_at",
+          "draw_scheduled_at",
           "status",
           "invite_code",
           "max_participants",
@@ -3484,6 +3509,18 @@
               }
             ],
             "title": "Wishlist Deadline At"
+          },
+          "draw_scheduled_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draw Scheduled At"
           },
           "max_participants": {
             "anyOf": [

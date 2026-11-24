@@ -42,7 +42,7 @@ _TRANSITION_ERRORS = {
 }
 
 # Campos que congelam depois do sorteio (afetam regras/participantes).
-_FROZEN_AFTER_DRAW = {"max_participants", "prefer_single_cycle"}
+_FROZEN_AFTER_DRAW = {"max_participants", "prefer_single_cycle", "draw_scheduled_at"}
 
 INVITE_CODE_BYTES = 9  # token_urlsafe(9) -> 12 caracteres
 
@@ -305,6 +305,14 @@ class GroupService:
             and data.wishlist_deadline_at <= now
         ):
             raise UnprocessableError("O prazo da lista precisa ser no futuro.", code="invalid_date")
+        if (
+            "draw_scheduled_at" in changed
+            and data.draw_scheduled_at
+            and data.draw_scheduled_at <= now
+        ):
+            raise UnprocessableError(
+                "O sorteio automático precisa ser no futuro.", code="invalid_date"
+            )
         if "join_deadline_at" in changed and data.join_deadline_at and data.join_deadline_at <= now:
             raise UnprocessableError(
                 "O prazo de inscrição precisa ser no futuro.", code="invalid_date"
@@ -320,6 +328,10 @@ class GroupService:
         if group.event_at and group.join_deadline_at and group.join_deadline_at > group.event_at:
             raise UnprocessableError(
                 "O prazo de inscrição deve ser antes do evento.", code="invalid_date"
+            )
+        if group.event_at and group.draw_scheduled_at and group.draw_scheduled_at > group.event_at:
+            raise UnprocessableError(
+                "O sorteio automático deve ser antes do evento.", code="invalid_date"
             )
         if (
             group.event_at
@@ -346,6 +358,7 @@ class GroupService:
             event_maps_url=group.event_maps_url,
             join_deadline_at=group.join_deadline_at,
             wishlist_deadline_at=group.wishlist_deadline_at,
+            draw_scheduled_at=group.draw_scheduled_at,
             status=group.status,
             invite_code=group.invite_code,
             max_participants=group.max_participants,

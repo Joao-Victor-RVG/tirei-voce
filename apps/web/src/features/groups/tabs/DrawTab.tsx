@@ -3,9 +3,10 @@ import { useState } from "react";
 import { errorMessage } from "@/api/client";
 import type { Group } from "@/api/types";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { Alert, Button, Card, EmptyState } from "@/components/ui";
+import { Alert, Button, Card, EmptyState, Field, Input } from "@/components/ui";
+import { formatDateTime, isoToLocalInput, localInputToIso } from "@/lib/format";
 
-import { useDrawValidation, useExecuteDraw } from "../api";
+import { useDrawValidation, useExecuteDraw, useUpdateGroup } from "../api";
 import { DrawValidationCard } from "../DrawValidationCard";
 import { GiftProgressCard } from "../GiftProgressCard";
 import { RevealCard } from "../RevealCard";
@@ -59,8 +60,9 @@ function OrganizerDraw({ group }: { group: Group }) {
       )}
       {draw.isError && <Alert>{errorMessage(draw.error)}</Alert>}
       <Button block disabled={!canDraw || !possible} onClick={() => setConfirm(true)}>
-        Sortear 🎲
+        Sortear agora 🎲
       </Button>
+      {canDraw && <ScheduleDraw group={group} />}
       <ConfirmDialog
         open={confirm}
         title="Sortear agora?"
@@ -80,5 +82,64 @@ function OrganizerDraw({ group }: { group: Group }) {
         participar.
       </ConfirmDialog>
     </Card>
+  );
+}
+
+function ScheduleDraw({ group }: { group: Group }) {
+  const update = useUpdateGroup(group.id);
+  const [value, setValue] = useState(() => isoToLocalInput(group.draw_scheduled_at));
+  const [error, setError] = useState<string | null>(null);
+
+  const save = async (iso: string | null) => {
+    setError(null);
+    if (iso && Date.parse(iso) <= Date.now()) return setError("Escolha um horário no futuro.");
+    try {
+      await update.mutateAsync({ draw_scheduled_at: iso });
+      if (!iso) setValue("");
+    } catch (e) {
+      setError(errorMessage(e));
+    }
+  };
+
+  return (
+    <div className="space-y-3 rounded-2xl bg-black/[0.03] p-4 text-left">
+      <h3 className="font-extrabold">⏰ Sorteio automático</h3>
+      {group.draw_scheduled_at ? (
+        <>
+          <p className="text-sm">
+            Agendado para <strong>{formatDateTime(group.draw_scheduled_at)}</strong>. Se as regras
+            impedirem, avisamos a organização.
+          </p>
+          <Button variant="secondary" loading={update.isPending} onClick={() => save(null)}>
+            Cancelar agendamento
+          </Button>
+        </>
+      ) : (
+        <>
+          <p className="text-sm text-gray-600">
+            Prefere deixar marcado? O sorteio acontece sozinho no horário.
+          </p>
+          <Field label="Data e hora do sorteio" hint="Horário de Brasília.">
+            {(id) => (
+              <Input
+                id={id}
+                type="datetime-local"
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+              />
+            )}
+          </Field>
+          <Button
+            variant="secondary"
+            loading={update.isPending}
+            disabled={!value}
+            onClick={() => save(localInputToIso(value))}
+          >
+            Agendar sorteio
+          </Button>
+        </>
+      )}
+      {error && <Alert>{error}</Alert>}
+    </div>
   );
 }

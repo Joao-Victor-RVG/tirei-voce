@@ -45,6 +45,7 @@ class Group(UUIDPrimaryKey, Timestamps, Base):
     event_maps_url: Mapped[str | None] = mapped_column(String(2048))
     join_deadline_at: Mapped[datetime | None]
     wishlist_deadline_at: Mapped[datetime | None]
+    draw_scheduled_at: Mapped[datetime | None] = mapped_column(index=True)
     status: Mapped[GroupStatus] = mapped_column(
         str_enum(GroupStatus, "group_status"), default=GroupStatus.DRAFT, index=True
     )
