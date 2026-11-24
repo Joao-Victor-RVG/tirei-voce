@@ -859,6 +859,8 @@ export interface components {
         AuthConfigOut: {
             /** Google Enabled */
             google_enabled: boolean;
+            /** Whatsapp Enabled */
+            whatsapp_enabled: boolean;
         };
         /** BlockedPairCreate */
         BlockedPairCreate: {
@@ -1311,6 +1313,10 @@ export interface components {
             has_google: boolean;
             /** Email Reminders */
             email_reminders: boolean;
+            /** Phone */
+            phone: string | null;
+            /** Whatsapp Opt In */
+            whatsapp_opt_in: boolean;
         };
         /** MeUpdate */
         MeUpdate: {
@@ -1324,6 +1330,10 @@ export interface components {
             shoe_size?: string | null;
             /** Email Reminders */
             email_reminders?: boolean | null;
+            /** Phone */
+            phone?: string | null;
+            /** Whatsapp Opt In */
+            whatsapp_opt_in?: boolean | null;
         };
         /** MessageOut */
         MessageOut: {

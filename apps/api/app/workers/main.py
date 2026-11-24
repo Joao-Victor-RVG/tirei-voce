@@ -8,6 +8,7 @@ from app.core.logging import configure_logging
 from app.core.queue import redis_settings
 from app.core.sentry import init_sentry
 from app.modules.notifications.email import EmailMessage, build_email_sender
+from app.modules.notifications.whatsapp import build_whatsapp_sender
 from app.workers.draws import scheduled_draws
 from app.workers.notifications import push_chat_message, push_draw_done
 from app.workers.reminders import send_due_reminders
@@ -20,6 +21,7 @@ async def startup(ctx: dict[str, Any]) -> None:
     configure_logging(settings.log_level)
     init_sentry(settings)
     ctx["email_sender"] = build_email_sender(settings)
+    ctx["whatsapp_sender"] = build_whatsapp_sender(settings)
 
 
 async def send_email(ctx: dict[str, Any], payload: dict[str, Any]) -> None:

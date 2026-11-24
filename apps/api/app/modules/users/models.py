@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Index, String, func, true
+from sqlalchemy import Index, String, false, func, true
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base, Timestamps, UUIDPrimaryKey
@@ -19,6 +19,8 @@ class User(UUIDPrimaryKey, Timestamps, Base):
     shoe_size: Mapped[str | None] = mapped_column(String(10))
     is_active: Mapped[bool] = mapped_column(default=True, server_default=true())
     email_reminders: Mapped[bool] = mapped_column(default=True, server_default=true())
+    phone: Mapped[str | None] = mapped_column(String(20))  # E.164, só com opt-in de WhatsApp
+    whatsapp_opt_in: Mapped[bool] = mapped_column(default=False, server_default=false())
 
     __table_args__ = (Index("uq_users_email_lower", func.lower(email), unique=True),)
 

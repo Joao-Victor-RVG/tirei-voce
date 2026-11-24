@@ -13,6 +13,7 @@ from app.modules.groups.models import Group
 from app.modules.notifications import templates
 from app.modules.notifications.email import EmailSender
 from app.modules.notifications.push import PushMessage, send_to_users
+from app.modules.notifications.whatsapp import TEMPLATE_REMINDER, WhatsAppMessage, WhatsAppSender
 from app.modules.participants.models import Participant
 from app.modules.reminders.models import ReminderKind, SentReminder
 from app.modules.reminders.schedule import (
@@ -79,9 +80,15 @@ def content_for(group: Group, reminder: DueReminder) -> ReminderContent:
 
 
 class ReminderService:
-    def __init__(self, session: AsyncSession, email_sender: EmailSender) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        email_sender: EmailSender,
+        whatsapp_sender: WhatsAppSender | None = None,
+    ) -> None:
         self.session = session
         self.email_sender = email_sender
+        self.whatsapp_sender = whatsapp_sender
 
     async def send_due(self, now: datetime) -> int:
         """Envia os lembretes vencidos. Retorna quantos lembretes (não pessoas) saíram."""
@@ -161,6 +168,22 @@ class ReminderService:
                 logger.warning(
                     "reminder_email_failed", extra={"group_id": str(group.id)}, exc_info=True
                 )
+        if self.whatsapp_sender is not None:
+            for user in users:
+                if not (user.whatsapp_opt_in and user.phone):
+                    continue
+                try:
+                    await self.whatsapp_sender.send(
+                        WhatsAppMessage(
+                            to=user.phone,
+                            template=TEMPLATE_REMINDER,
+                            params=(user.name, content.body, url),
+                        )
+                    )
+                except Exception:
+                    logger.warning(
+                        "reminder_whatsapp_failed", extra={"group_id": str(group.id)}, exc_info=True
+                    )
         await send_to_users(
             self.session,
             [u.id for u in users],

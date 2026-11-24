@@ -14,6 +14,8 @@ const ME = {
   has_password: true,
   has_google: false,
   email_reminders: true,
+  phone: null,
+  whatsapp_opt_in: false,
 };
 
 afterEach(() => {
@@ -24,7 +26,8 @@ afterEach(() => {
 test("login com erro mostra a mensagem da API", async () => {
   mockApi((url) => {
     if (url.pathname.endsWith("/me")) return unauthorized;
-    if (url.pathname.endsWith("/auth/config")) return { body: { google_enabled: false } };
+    if (url.pathname.endsWith("/auth/config"))
+      return { body: { google_enabled: false, whatsapp_enabled: false } };
     if (url.pathname.endsWith("/auth/login"))
       return {
         status: 401,
@@ -41,7 +44,9 @@ test("login com erro mostra a mensagem da API", async () => {
 
 test("login valida campos antes de chamar a API", async () => {
   const calls = mockApi((url) =>
-    url.pathname.endsWith("/me") ? unauthorized : { body: { google_enabled: true } },
+    url.pathname.endsWith("/me")
+      ? unauthorized
+      : { body: { google_enabled: true, whatsapp_enabled: false } },
   );
   renderRoute("/login");
   const user = userEvent.setup();
@@ -58,7 +63,8 @@ test("login bem-sucedido volta para o next", async () => {
   let loggedIn = false;
   mockApi((url) => {
     if (url.pathname.endsWith("/me")) return loggedIn ? { body: ME } : unauthorized;
-    if (url.pathname.endsWith("/auth/config")) return { body: { google_enabled: false } };
+    if (url.pathname.endsWith("/auth/config"))
+      return { body: { google_enabled: false, whatsapp_enabled: false } };
     if (url.pathname.endsWith("/auth/login")) {
       loggedIn = true;
       return { body: ME };
@@ -75,7 +81,9 @@ test("login bem-sucedido volta para o next", async () => {
 
 test("next externo é ignorado", async () => {
   mockApi((url) =>
-    url.pathname.endsWith("/me") ? unauthorized : { body: { google_enabled: false } },
+    url.pathname.endsWith("/me")
+      ? unauthorized
+      : { body: { google_enabled: false, whatsapp_enabled: false } },
   );
   renderRoute("/login?next=https%3A%2F%2Fevil.com");
   expect(await screen.findByRole("link", { name: "Cadastre-se" })).toHaveAttribute(
@@ -88,7 +96,8 @@ test("cadastro leva para a tela de confirmar e-mail", async () => {
   let registered = false;
   const calls = mockApi((url) => {
     if (url.pathname.endsWith("/me")) return registered ? { body: ME } : unauthorized;
-    if (url.pathname.endsWith("/auth/config")) return { body: { google_enabled: false } };
+    if (url.pathname.endsWith("/auth/config"))
+      return { body: { google_enabled: false, whatsapp_enabled: false } };
     if (url.pathname.endsWith("/auth/register")) {
       registered = true;
       return { status: 201, body: ME };
@@ -112,7 +121,8 @@ test("cadastro leva para a tela de confirmar e-mail", async () => {
 test("cadastro com e-mail repetido marca o campo", async () => {
   mockApi((url) => {
     if (url.pathname.endsWith("/me")) return unauthorized;
-    if (url.pathname.endsWith("/auth/config")) return { body: { google_enabled: false } };
+    if (url.pathname.endsWith("/auth/config"))
+      return { body: { google_enabled: false, whatsapp_enabled: false } };
     if (url.pathname.endsWith("/auth/register"))
       return {
         status: 409,
@@ -199,7 +209,9 @@ test("redefinir senha confere a confirmação", async () => {
 
 test("rota protegida manda para o login com next", async () => {
   mockApi((url) =>
-    url.pathname.endsWith("/me") ? unauthorized : { body: { google_enabled: false } },
+    url.pathname.endsWith("/me")
+      ? unauthorized
+      : { body: { google_enabled: false, whatsapp_enabled: false } },
   );
   const { router } = renderRoute("/profile");
   await waitFor(() => expect(router.state.location.pathname).toBe("/login"));
@@ -263,5 +275,30 @@ test("perfil desliga lembretes por e-mail", async () => {
   await user.click(screen.getByRole("button", { name: "Salvar" }));
   await waitFor(() =>
     expect(calls.find((c) => c.method === "PATCH")?.body).toMatchObject({ email_reminders: false }),
+  );
+});
+
+test("perfil mostra WhatsApp só quando há provedor e salva o opt-in", async () => {
+  const calls = mockApi((url, init) => {
+    if (url.pathname.endsWith("/me") && init.method === "PATCH")
+      return {
+        body: { ...ME, email_verified: true, phone: "+5511987654321", whatsapp_opt_in: true },
+      };
+    if (url.pathname.endsWith("/me")) return { body: { ...ME, email_verified: true } };
+    if (url.pathname.endsWith("/auth/config"))
+      return { body: { google_enabled: false, whatsapp_enabled: true } };
+    if (url.pathname.endsWith("/push/config"))
+      return { body: { enabled: false, public_key: null, subscribed: false } };
+  });
+  renderRoute("/profile");
+  const user = userEvent.setup();
+  await user.type(await screen.findByLabelText("Celular com DDD"), "(11) 98765-4321");
+  await user.click(screen.getByRole("checkbox", { name: /WhatsApp/ }));
+  await user.click(screen.getByRole("button", { name: "Salvar WhatsApp" }));
+  await waitFor(() =>
+    expect(calls.find((c) => c.method === "PATCH")?.body).toEqual({
+      phone: "(11) 98765-4321",
+      whatsapp_opt_in: true,
+    }),
   );
 });

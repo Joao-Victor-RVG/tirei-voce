@@ -11,6 +11,8 @@ export const ME: Me = {
   has_password: true,
   has_google: false,
   email_reminders: true,
+  phone: null,
+  whatsapp_opt_in: false,
 };
 
 export const THEMES = [

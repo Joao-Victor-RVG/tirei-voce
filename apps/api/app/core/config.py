@@ -43,6 +43,9 @@ class Settings(BaseSettings):
     vapid_private_key: str | None = None
     vapid_subject: str = "mailto:contato@tireivoce.com.br"
 
+    # WhatsApp: sem provedor real por enquanto. "console" só registra no log (dev).
+    whatsapp_provider: Literal["none", "console"] = "none"
+
     sentry_dsn: str | None = None
     sentry_traces_sample_rate: float = 0.0
 
@@ -69,6 +72,10 @@ class Settings(BaseSettings):
             if not self.cookie_secure:
                 raise ValueError("COOKIE_SECURE precisa ser true em produção")
         return self
+
+    @property
+    def whatsapp_enabled(self) -> bool:
+        return self.whatsapp_provider != "none"
 
     @property
     def push_enabled(self) -> bool:

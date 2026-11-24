@@ -7,4 +7,5 @@ from app.modules.reminders.service import ReminderService
 
 async def send_due_reminders(ctx: dict[str, Any]) -> int:
     async with get_sessionmaker()() as session:
-        return await ReminderService(session, ctx["email_sender"]).send_due(datetime.now(UTC))
+        service = ReminderService(session, ctx["email_sender"], ctx.get("whatsapp_sender"))
+        return await service.send_due(datetime.now(UTC))

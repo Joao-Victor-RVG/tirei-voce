@@ -190,7 +190,7 @@ async def test_google_conflicting_account(client: httpx.AsyncClient, google: Fak
 
 
 async def test_google_disabled(client: httpx.AsyncClient) -> None:
-    assert (await client.get("/api/v1/auth/config")).json() == {"google_enabled": False}
+    assert (await client.get("/api/v1/auth/config")).json()["google_enabled"] is False
     response = await client.get("/api/v1/auth/google/start")
     assert response.headers["location"].endswith("/login?error=google_disabled")
     response = await client.get("/api/v1/auth/google/callback", params={"code": "x", "state": "y"})

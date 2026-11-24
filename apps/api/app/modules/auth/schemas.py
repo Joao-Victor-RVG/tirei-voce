@@ -54,3 +54,4 @@ class MessageOut(BaseModel):
 
 class AuthConfigOut(BaseModel):
     google_enabled: bool
+    whatsapp_enabled: bool

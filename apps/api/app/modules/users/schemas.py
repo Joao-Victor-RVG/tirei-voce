@@ -22,6 +22,8 @@ class MeOut(BaseModel):
     has_password: bool
     has_google: bool
     email_reminders: bool
+    phone: str | None
+    whatsapp_opt_in: bool
 
     @classmethod
     def from_user(cls, user: User) -> "MeOut":
@@ -36,6 +38,8 @@ class MeOut(BaseModel):
             has_password=user.password_hash is not None,
             has_google=user.google_sub is not None,
             email_reminders=user.email_reminders,
+            phone=user.phone,
+            whatsapp_opt_in=user.whatsapp_opt_in,
         )
 
 
@@ -47,3 +51,5 @@ class MeUpdate(BaseModel):
     shirt_size: Size | None = None
     shoe_size: Size | None = None
     email_reminders: bool | None = None
+    phone: Annotated[str, StringConstraints(strip_whitespace=True, max_length=30)] | None = None
+    whatsapp_opt_in: bool | None = None

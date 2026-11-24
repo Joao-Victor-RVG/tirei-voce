@@ -2652,10 +2652,14 @@
           "google_enabled": {
             "type": "boolean",
             "title": "Google Enabled"
+          },
+          "whatsapp_enabled": {
+            "type": "boolean",
+            "title": "Whatsapp Enabled"
           }
         },
         "type": "object",
-        "required": ["google_enabled"],
+        "required": ["google_enabled", "whatsapp_enabled"],
         "title": "AuthConfigOut"
       },
       "BlockedPairCreate": {
@@ -3978,6 +3982,21 @@
           "email_reminders": {
             "type": "boolean",
             "title": "Email Reminders"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "whatsapp_opt_in": {
+            "type": "boolean",
+            "title": "Whatsapp Opt In"
           }
         },
         "type": "object",
@@ -3991,7 +4010,9 @@
           "shoe_size",
           "has_password",
           "has_google",
-          "email_reminders"
+          "email_reminders",
+          "phone",
+          "whatsapp_opt_in"
         ],
         "title": "MeOut"
       },
@@ -4060,6 +4081,29 @@
               }
             ],
             "title": "Email Reminders"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 30
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "whatsapp_opt_in": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Whatsapp Opt In"
           }
         },
         "additionalProperties": false,

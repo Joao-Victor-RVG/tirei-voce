@@ -49,7 +49,10 @@ def get_google_client() -> GoogleOAuthClient | None:
 
 @router.get("/config", response_model=AuthConfigOut)
 async def auth_config() -> AuthConfigOut:
-    return AuthConfigOut(google_enabled=get_settings().google_enabled)
+    settings = get_settings()
+    return AuthConfigOut(
+        google_enabled=settings.google_enabled, whatsapp_enabled=settings.whatsapp_enabled
+    )
 
 
 @router.get("/csrf", response_model=CsrfOut)
