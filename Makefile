@@ -2,7 +2,7 @@ COMPOSE := docker compose -f infra/docker-compose.yml
 API := cd apps/api &&
 WEB := cd apps/web &&
 
-.PHONY: dev down logs migrate migration seed keys test test-api test-web lint lint-api lint-web format help
+.PHONY: dev down logs migrate migration seed keys api-types test test-api test-web lint lint-api lint-web format help
 
 dev: ## Sobe tudo (postgres, redis, api, worker, web) com hot reload
 	$(COMPOSE) up --build
@@ -27,6 +27,10 @@ keys: ## Gera segredos novos para JWT_SECRET, DRAW_ENCRYPTION_KEY e DRAW_HMAC_KE
 
 migration: ## Gera uma migration: make migration m="descricao"
 	$(COMPOSE) exec api alembic revision --autogenerate -m "$(m)"
+
+api-types: ## Regenera openapi.json e os tipos TypeScript do frontend
+	$(API) uv run python -m app.export_openapi ../web/openapi.json
+	$(WEB) pnpm gen:api && pnpm exec prettier --write openapi.json >/dev/null
 
 test: test-api test-web ## Roda todos os testes
 

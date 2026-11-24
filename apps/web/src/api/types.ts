@@ -1,0 +1,26 @@
+import type { components } from "./schema";
+
+type Schemas = components["schemas"];
+
+export type Me = Schemas["MeOut"];
+export type MeUpdate = Schemas["MeUpdate"];
+export type AuthConfig = Schemas["AuthConfigOut"];
+export type Theme = Schemas["ThemeOut"];
+export type Group = Schemas["GroupOut"];
+export type GroupSummary = Schemas["GroupSummaryOut"];
+export type GroupCreate = Schemas["GroupCreate"];
+export type GroupUpdate = Schemas["GroupUpdate"];
+export type GroupStatus = Schemas["GroupStatus"];
+export type GroupPage = Schemas["Page_GroupSummaryOut_"];
+export type InvitePreview = Schemas["InvitePreviewOut"];
+export type JoinResult = Schemas["JoinOut"];
+export type Participant = Schemas["ParticipantOut"];
+export type WishlistItem = Schemas["WishlistItemOut"];
+export type WishlistItemCreate = Schemas["WishlistItemCreate"];
+export type WishlistItemUpdate = Schemas["WishlistItemUpdate"];
+export type Preferences = Schemas["PreferencesOut"];
+export type Circle = Schemas["CircleOut"];
+export type BlockedPair = Schemas["BlockedPairOut"];
+export type DrawValidation = Schemas["DrawValidationOut"];
+export type DrawResult = Schemas["DrawOut"];
+export type MyMatch = Schemas["MyMatchOut"];

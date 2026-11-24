@@ -11,7 +11,7 @@
     "format": "prettier --write .",
     "typecheck": "tsc -b",
     "test": "vitest run",
-    "gen:api": "openapi-typescript ../api/openapi.json -o src/api/schema.d.ts"
+    "gen:api": "openapi-typescript ./openapi.json -o src/api/schema.d.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^7.0.8",
