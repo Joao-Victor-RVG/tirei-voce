@@ -1,8 +1,12 @@
 import type { RouteObject } from "react-router-dom";
 
 import { Layout } from "@/components/Layout";
-import { RequireAuth } from "@/features/auth/RequireAuth";
+import { Protected } from "@/features/auth/RequireAuth";
+import { CreateGroupPage } from "@/pages/CreateGroupPage";
 import { ForgotPasswordPage } from "@/pages/ForgotPasswordPage";
+import { GroupPage } from "@/pages/GroupPage";
+import { GroupsPage } from "@/pages/GroupsPage";
+import { InvitePage } from "@/pages/InvitePage";
 import { LandingPage } from "@/pages/LandingPage";
 import { LoginPage } from "@/pages/LoginPage";
 import { ProfilePage } from "@/pages/ProfilePage";
@@ -21,13 +25,13 @@ export const routes: RouteObject[] = [
       { path: "/verify-email", element: <VerifyEmailPage /> },
       { path: "/forgot-password", element: <ForgotPasswordPage /> },
       { path: "/reset-password", element: <ResetPasswordPage /> },
+      { path: "/i/:code", element: <InvitePage /> },
+      { path: "/groups", element: <Protected page={<GroupsPage />} /> },
+      { path: "/groups/new", element: <Protected page={<CreateGroupPage />} /> },
+      { path: "/groups/:groupId", element: <Protected page={<GroupPage />} /> },
       {
         path: "/profile",
-        element: (
-          <RequireAuth>
-            <ProfilePage />
-          </RequireAuth>
-        ),
+        element: <Protected page={<ProfilePage />} />,
       },
       { path: "/privacidade", element: <PrivacyPage /> },
       { path: "/termos", element: <TermsPage /> },

@@ -1,0 +1,373 @@
+import { screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+
+import { mockApi, renderRoute, unauthorized } from "@/test/render";
+import { group, ME, THEMES } from "@/test/fixtures";
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  localStorage.clear();
+});
+
+const json = (body: unknown, status = 200) => ({ status, body });
+
+test("meus grupos lista os cards com status e data", async () => {
+  mockApi((url) => {
+    if (url.pathname.endsWith("/me")) return json(ME);
+    if (url.pathname.endsWith("/groups"))
+      return json({
+        items: [
+          {
+            id: "g1",
+            title: "Natal da Família",
+            display_name: "Amigo Secreto",
+            theme: THEMES[0],
+            event_at: "2099-12-24T23:00:00Z",
+            status: "OPEN",
+            my_role: "owner",
+            participant_count: 3,
+          },
+        ],
+        next_cursor: null,
+      });
+  });
+  renderRoute("/groups");
+  const card = await screen.findByRole("link", { name: /Natal da Família/ });
+  expect(within(card).getByText("Inscrições abertas")).toBeInTheDocument();
+  expect(within(card).getByText(/24\/12\/2099/)).toBeInTheDocument();
+  expect(within(card).getByText(/3 pessoas/)).toBeInTheDocument();
+});
+
+test("meus grupos vazio mostra CTA", async () => {
+  mockApi((url) => {
+    if (url.pathname.endsWith("/me")) return json(ME);
+    if (url.pathname.endsWith("/groups")) return json({ items: [], next_cursor: null });
+  });
+  renderRoute("/groups");
+  expect(await screen.findByText("Nenhum grupo por aqui ainda")).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "+ Criar grupo" })).toHaveAttribute(
+    "href",
+    "/groups/new",
+  );
+});
+
+test("erro ao carregar grupos permite tentar de novo", async () => {
+  mockApi((url) => {
+    if (url.pathname.endsWith("/me")) return json(ME);
+    if (url.pathname.endsWith("/groups"))
+      return json(
+        { error: { code: "internal_error", message: "Ops! Algo deu errado. Tente novamente." } },
+        500,
+      );
+  });
+  renderRoute("/groups");
+  expect(await screen.findByText("Ops! Algo deu errado. Tente novamente.")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Tentar de novo" })).toBeInTheDocument();
+});
+
+test("wizard cria o grupo, abre inscrições e vai para a página", async () => {
+  const calls = mockApi((url, init) => {
+    if (url.pathname.endsWith("/me")) return json(ME);
+    if (url.pathname.endsWith("/themes")) return json(THEMES);
+    if (url.pathname.endsWith("/groups") && init.method === "POST")
+      return json(group({ status: "DRAFT" }), 201);
+    if (url.pathname.endsWith("/groups/g1/open")) return json(group());
+    if (url.pathname.endsWith("/groups/g1")) return json(group());
+  });
+  const { router } = renderRoute("/groups/new");
+  const user = userEvent.setup();
+
+  await user.click(await screen.findByText("Amigo da Onça"));
+  await user.click(screen.getByRole("button", { name: "Continuar" }));
+  expect(await screen.findByText("Dê um nome ao grupo.")).toBeInTheDocument();
+  await user.type(screen.getByLabelText("Nome do grupo"), "Onça do Escritório");
+  await user.click(screen.getByRole("button", { name: "Continuar" }));
+
+  await user.type(await screen.findByLabelText("Valor mínimo (R$)"), "30");
+  await user.type(screen.getByLabelText("Valor máximo (R$)"), "20");
+  await user.click(screen.getByRole("button", { name: "Continuar" }));
+  expect(await screen.findByText("Deve ser maior ou igual ao mínimo.")).toBeInTheDocument();
+  await user.clear(screen.getByLabelText("Valor máximo (R$)"));
+  await user.type(screen.getByLabelText("Valor máximo (R$)"), "50,90");
+  await user.type(screen.getByLabelText(/Local/), "Escritório");
+  await user.click(screen.getByRole("button", { name: "Continuar" }));
+
+  expect(await screen.findByText("Onça do Escritório")).toBeInTheDocument();
+  expect(screen.getByText(/R\$\s30,00 a R\$\s50,90/)).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: /Criar grupo/ }));
+
+  await waitFor(() => expect(router.state.location.pathname).toBe("/groups/g1"));
+  const created = calls.find((c) => c.path === "/groups" && c.method === "POST");
+  expect(created?.body).toMatchObject({
+    theme_slug: "amigo-da-onca",
+    title: "Onça do Escritório",
+    min_value_cents: 3000,
+    max_value_cents: 5090,
+    event_location: "Escritório",
+    custom_name: null,
+  });
+  expect(calls.some((c) => c.path === "/groups/g1/open")).toBe(true);
+});
+
+test("membro não vê a aba Regras; organizador vê", async () => {
+  mockApi((url) => {
+    if (url.pathname.endsWith("/me")) return json(ME);
+    if (url.pathname.endsWith("/groups/g1")) return json(group({ my_role: "member" }));
+  });
+  renderRoute("/groups/g1");
+  expect(await screen.findByRole("tab", { name: "Visão geral" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  expect(screen.queryByRole("tab", { name: "Regras" })).not.toBeInTheDocument();
+  vi.unstubAllGlobals();
+
+  mockApi((url) => {
+    if (url.pathname.endsWith("/me")) return json(ME);
+    if (url.pathname.endsWith("/groups/g1")) return json(group());
+  });
+  renderRoute("/groups/g1");
+  expect(await screen.findAllByRole("tab", { name: "Regras" })).not.toHaveLength(0);
+});
+
+test("grupo inexistente mostra mensagem amigável", async () => {
+  mockApi((url) => (url.pathname.endsWith("/me") ? json(ME) : undefined));
+  renderRoute("/groups/nope");
+  expect(await screen.findByText("Grupo não encontrado")).toBeInTheDocument();
+});
+
+test("visão geral mostra contagem regressiva e compartilhamento", async () => {
+  mockApi((url) => {
+    if (url.pathname.endsWith("/me")) return json(ME);
+    if (url.pathname.endsWith("/groups/g1")) return json(group());
+  });
+  renderRoute("/groups/g1");
+  expect(await screen.findByLabelText("Contagem regressiva para o evento")).toBeInTheDocument();
+  const whatsapp = screen.getByRole("link", { name: "WhatsApp" });
+  expect(whatsapp.getAttribute("href")).toContain("https://wa.me/?text=");
+  expect(decodeURIComponent(whatsapp.getAttribute("href")!)).toContain("/i/abcdefghijkl");
+  expect(screen.getByText(/R\$\s50,00 a R\$\s100,00/)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Fechar inscrições" })).toBeInTheDocument();
+});
+
+test("regras: validação ao vivo e criação de círculo", async () => {
+  let circles: unknown[] = [];
+  let possible = true;
+  const calls = mockApi((url, init) => {
+    const path = url.pathname.replace("/api/v1", "");
+    if (path === "/me") return json(ME);
+    if (path === "/groups/g1") return json(group());
+    if (path === "/groups/g1/participants")
+      return json(
+        ["Ana", "Bia", "Caio"].map((name, i) => ({
+          id: `p${i + 1}`,
+          user: { id: `u${i + 1}`, name, avatar_url: null },
+          role: i === 0 ? "owner" : "member",
+          joined_at: "2026-11-01T00:00:00Z",
+          is_me: i === 0,
+        })),
+      );
+    if (path === "/groups/g1/exclusion-circles" && init.method === "POST") {
+      possible = false;
+      circles = [
+        {
+          id: "c1",
+          name: "Casal",
+          members: [
+            { participant_id: "p1", name: "Ana" },
+            { participant_id: "p2", name: "Bia" },
+          ],
+        },
+      ];
+      return json(circles[0], 201);
+    }
+    if (path === "/groups/g1/exclusion-circles") return json(circles);
+    if (path === "/groups/g1/blocked-pairs") return json([]);
+    if (path === "/groups/g1/draw/validate")
+      return json({
+        possible,
+        participant_count: 3,
+        min_participants: 3,
+        message: possible
+          ? "Tudo certo! O sorteio é possível com as regras atuais."
+          : "Com as restrições atuais não existe sorteio possível.",
+        most_constrained: possible ? [] : [{ participant_id: "p3", name: "Caio", options: 0 }],
+      });
+  });
+  renderRoute("/groups/g1?tab=rules");
+  const user = userEvent.setup();
+  expect(await screen.findByText(/Tudo certo!/)).toBeInTheDocument();
+
+  await user.click(screen.getByRole("button", { name: "+ Círculo" }));
+  await user.type(screen.getByLabelText("Nome do círculo"), "Casal");
+  await user.click(screen.getByText("Ana", { selector: "label" }));
+  await user.click(screen.getByText("Bia", { selector: "label" }));
+  await user.click(screen.getByRole("button", { name: "Salvar" }));
+
+  expect(await screen.findByText(/não existe sorteio possível/)).toBeInTheDocument();
+  expect(screen.getByText(/Caio \(0 opções\)/)).toBeInTheDocument();
+  expect(
+    calls.find((c) => c.path === "/groups/g1/exclusion-circles" && c.method === "POST")?.body,
+  ).toEqual({
+    name: "Casal",
+    participant_ids: ["p1", "p2"],
+  });
+});
+
+test("sorteio: organizador confirma e envia Idempotency-Key", async () => {
+  let drawn = false;
+  const headers: Array<Record<string, string>> = [];
+  mockApi((url, init) => {
+    const path = url.pathname.replace("/api/v1", "");
+    if (path === "/me") return json(ME);
+    if (path === "/groups/g1") return json(group({ status: drawn ? "DRAWN" : "CLOSED" }));
+    if (path === "/groups/g1/draw/validate")
+      return json({
+        possible: true,
+        participant_count: 4,
+        min_participants: 3,
+        message: "Tudo certo!",
+        most_constrained: [],
+      });
+    if (path === "/groups/g1/draw") {
+      headers.push(init.headers as Record<string, string>);
+      drawn = true;
+      return json({
+        draw_id: "d1",
+        version: 1,
+        executed_at: "2026-11-01T00:00:00Z",
+        participant_count: 4,
+      });
+    }
+  });
+  renderRoute("/groups/g1?tab=draw");
+  const user = userEvent.setup();
+  const button = await screen.findByRole("button", { name: /Sortear/ });
+  await waitFor(() => expect(button).toBeEnabled());
+  await user.click(button);
+  await user.click(await screen.findByRole("button", { name: "Sim, sortear!" }));
+  expect(await screen.findByRole("button", { name: /Toque para revelar/ })).toBeInTheDocument();
+  expect(headers[0]?.["Idempotency-Key"]).toMatch(/[0-9a-f-]{36}/);
+});
+
+test("revelação: só busca o par ao tocar e mostra a lista", async () => {
+  const calls = mockApi((url) => {
+    const path = url.pathname.replace("/api/v1", "");
+    if (path === "/me") return json(ME);
+    if (path === "/groups/g1") return json(group({ status: "DRAWN", my_role: "member" }));
+    if (path === "/groups/g1/my-match")
+      return json({
+        participant_id: "p3",
+        name: "Caio",
+        avatar_url: null,
+        shirt_size: "G",
+        shoe_size: "42",
+        wishlist: [
+          {
+            id: "w1",
+            title: "Fone de ouvido",
+            url: null,
+            price_hint_cents: 15000,
+            priority: 1,
+            notes: null,
+          },
+        ],
+        preferences: { dislikes: "Perfume", notes: null },
+      });
+  });
+  renderRoute("/groups/g1");
+  const user = userEvent.setup();
+  const reveal = await screen.findByRole("button", { name: /Toque para revelar/ });
+  expect(calls.some((c) => c.path === "/groups/g1/my-match")).toBe(false);
+
+  await user.click(reveal);
+  expect(await screen.findByRole("heading", { name: "Caio" })).toBeInTheDocument();
+  expect(screen.getByText("Fone de ouvido")).toBeInTheDocument();
+  expect(screen.getByText("Perfume")).toBeInTheDocument();
+  expect(screen.getByText("👕 G")).toBeInTheDocument();
+  expect(localStorage.getItem("tv_revealed:g1")).toBe("1");
+  expect(JSON.stringify(localStorage)).not.toContain("Caio");
+});
+
+test("convite sem login oferece cadastro e volta para o convite", async () => {
+  mockApi((url) => {
+    if (url.pathname.endsWith("/me")) return unauthorized;
+    if (url.pathname.endsWith("/invites/abcdefghijkl"))
+      return json({
+        title: "Natal da Família",
+        display_name: "Amigo Secreto",
+        theme: THEMES[0],
+        event_at: "2099-12-24T23:00:00Z",
+        event_location: "Casa da vó",
+        min_value_cents: 5000,
+        max_value_cents: 10000,
+        organizer_name: "Ana",
+        participant_count: 3,
+        can_join: true,
+        reason: null,
+      });
+  });
+  renderRoute("/i/abcdefghijkl");
+  expect(await screen.findByText("Ana te convidou para o")).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Quero participar!" })).toHaveAttribute(
+    "href",
+    "/register?next=%2Fi%2Fabcdefghijkl",
+  );
+  expect(screen.getByRole("link", { name: "Já tenho conta" })).toHaveAttribute(
+    "href",
+    "/login?next=%2Fi%2Fabcdefghijkl",
+  );
+});
+
+test("convite logado entra no grupo", async () => {
+  mockApi((url, init) => {
+    const path = url.pathname.replace("/api/v1", "");
+    if (path === "/me") return json(ME);
+    if (path === "/invites/abcdefghijkl/join" && init.method === "POST")
+      return json({ group_id: "g1", already_member: false });
+    if (path === "/invites/abcdefghijkl")
+      return json({
+        title: "Natal",
+        display_name: "Amigo Secreto",
+        theme: THEMES[0],
+        event_at: null,
+        event_location: null,
+        min_value_cents: null,
+        max_value_cents: null,
+        organizer_name: "Ana",
+        participant_count: 3,
+        can_join: true,
+        reason: null,
+      });
+    if (path === "/groups/g1") return json(group({ my_role: "member" }));
+  });
+  const { router } = renderRoute("/i/abcdefghijkl");
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: /Participar/ }));
+  await waitFor(() => expect(router.state.location.pathname).toBe("/groups/g1"));
+});
+
+test("convite fechado mostra o motivo", async () => {
+  mockApi((url) => {
+    if (url.pathname.endsWith("/me")) return json(ME);
+    if (url.pathname.endsWith("/invites/abcdefghijkl"))
+      return json({
+        title: "Natal",
+        display_name: "Amigo Secreto",
+        theme: THEMES[0],
+        event_at: null,
+        event_location: null,
+        min_value_cents: null,
+        max_value_cents: null,
+        organizer_name: "Ana",
+        participant_count: 3,
+        can_join: false,
+        reason: "As inscrições deste grupo estão encerradas.",
+      });
+  });
+  renderRoute("/i/abcdefghijkl");
+  expect(
+    await screen.findByText("As inscrições deste grupo estão encerradas."),
+  ).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /Participar/ })).not.toBeInTheDocument();
+});

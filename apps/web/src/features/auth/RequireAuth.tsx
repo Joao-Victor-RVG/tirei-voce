@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 
 import { ErrorState, PageLoader } from "@/components/ui";
@@ -15,4 +15,8 @@ export function RequireAuth({ children }: { children: ReactNode }) {
     return <ErrorState message={errorMessage(me.error)} onRetry={() => me.refetch()} />;
   if (!me.data) return <Navigate to={loginPath(location.pathname + location.search)} replace />;
   return <>{children}</>;
+}
+
+export function Protected({ page }: { page: ReactElement }) {
+  return <RequireAuth>{page}</RequireAuth>;
 }
