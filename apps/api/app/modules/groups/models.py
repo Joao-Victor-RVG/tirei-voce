@@ -46,6 +46,11 @@ class Group(UUIDPrimaryKey, Timestamps, Base):
     join_deadline_at: Mapped[datetime | None]
     wishlist_deadline_at: Mapped[datetime | None]
     draw_scheduled_at: Mapped[datetime | None] = mapped_column(index=True)
+    # Edição anterior (grupo duplicado): os pares dela não se repetem se avoid_previous_pairs.
+    previous_group_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("groups.id", ondelete="SET NULL"), index=True
+    )
+    avoid_previous_pairs: Mapped[bool] = mapped_column(default=True, server_default=true())
     status: Mapped[GroupStatus] = mapped_column(
         str_enum(GroupStatus, "group_status"), default=GroupStatus.DRAFT, index=True
     )

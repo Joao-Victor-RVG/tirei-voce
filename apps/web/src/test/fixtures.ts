@@ -39,6 +39,8 @@ export function group(overrides: Partial<Group> = {}): Group {
     join_deadline_at: null,
     wishlist_deadline_at: null,
     draw_scheduled_at: null,
+    previous_group_id: null,
+    avoid_previous_pairs: true,
     status: "OPEN",
     invite_code: "abcdefghijkl",
     max_participants: 100,

@@ -53,6 +53,11 @@ class ParticipantRepository:
         )
         return list((await self.session.scalars(stmt)).all())
 
+    async def user_ids_by_participant(self, group_id: uuid.UUID) -> dict[uuid.UUID, uuid.UUID]:
+        """Todos os participantes do grupo (inclusive quem saiu): participante → usuário."""
+        stmt = select(Participant.id, Participant.user_id).where(Participant.group_id == group_id)
+        return {pid: uid for pid, uid in (await self.session.execute(stmt)).all()}
+
     async def count_active(self, group_id: uuid.UUID) -> int:
         stmt = select(func.count()).where(
             Participant.group_id == group_id, Participant.left_at.is_(None)

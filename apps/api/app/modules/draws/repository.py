@@ -31,6 +31,10 @@ class DrawRepository:
         purchased, total = (await self.session.execute(stmt)).one()
         return int(purchased), int(total)
 
+    async def assignments(self, draw_id: uuid.UUID) -> list[DrawAssignment]:
+        stmt = select(DrawAssignment).where(DrawAssignment.draw_id == draw_id)
+        return list((await self.session.scalars(stmt)).all())
+
     async def assignment_for_giver(
         self, draw_id: uuid.UUID, giver_participant_id: uuid.UUID
     ) -> DrawAssignment | None:

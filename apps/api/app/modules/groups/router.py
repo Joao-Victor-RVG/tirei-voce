@@ -11,6 +11,7 @@ from app.modules.auth.dependencies import Client, CurrentUser, VerifiedUser
 from app.modules.groups.models import GroupStatus
 from app.modules.groups.schemas import (
     GroupCreate,
+    GroupDuplicate,
     GroupOut,
     GroupSummaryOut,
     GroupUpdate,
@@ -81,6 +82,16 @@ async def regenerate_invite_code(
     group_id: uuid.UUID, user: CurrentUser, service: Service
 ) -> GroupOut:
     return await service.regenerate_invite_code(group_id, user)
+
+
+@router.post(
+    "/groups/{group_id}/duplicate", response_model=GroupOut, status_code=status.HTTP_201_CREATED
+)
+async def duplicate_group(
+    group_id: uuid.UUID, data: GroupDuplicate, user: VerifiedUser, service: Service
+) -> GroupOut:
+    """Cria a próxima edição do grupo (ex.: Natal do ano que vem)."""
+    return await service.duplicate(group_id, user, data)
 
 
 @router.get("/invites/{code}", response_model=InvitePreviewOut, tags=["invites"])

@@ -527,3 +527,28 @@ test("organização agenda o sorteio automático", async () => {
     draw_scheduled_at: "2099-12-20T23:00:00.000Z",
   });
 });
+
+test("organização cria a próxima edição sem repetir pares", async () => {
+  const calls = mockApi((url, init) => {
+    const path = url.pathname.replace("/api/v1", "");
+    if (path === "/me") return json(ME);
+    if (path === "/groups/g1/duplicate" && init.method === "POST")
+      return json(group({ id: "g2", status: "DRAFT", previous_group_id: "g1" }), 201);
+    if (path === "/groups/g1") return json(group({ status: "FINISHED" }));
+    if (path === "/groups/g2")
+      return json(group({ id: "g2", status: "DRAFT", previous_group_id: "g1" }));
+  });
+  const { router } = renderRoute("/groups/g1?tab=overview");
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: "Criar próxima edição" }));
+  await user.clear(screen.getByLabelText("Nome da nova edição"));
+  await user.type(screen.getByLabelText("Nome da nova edição"), "Natal 2027");
+  expect(screen.getByRole("checkbox", { name: /Não repetir os pares/ })).toBeChecked();
+  await user.click(screen.getByRole("button", { name: "Criar" }));
+  await waitFor(() => expect(router.state.location.pathname).toBe("/groups/g2"));
+  expect(calls.find((c) => c.path === "/groups/g1/duplicate")?.body).toEqual({
+    title: "Natal 2027",
+    event_at: null,
+    avoid_previous_pairs: true,
+  });
+});

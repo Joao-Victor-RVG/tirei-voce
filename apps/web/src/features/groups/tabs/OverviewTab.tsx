@@ -14,7 +14,8 @@ import { Countdown } from "../Countdown";
 import { EventFields } from "../EventFields";
 import { eventPayload, eventSchema, eventValuesFromGroup, type EventValues } from "../eventForm";
 import { ShareInvite } from "../ShareInvite";
-import { isOrganizer } from "../status";
+import { NextEditionCard } from "../NextEditionCard";
+import { isFrozen, isOrganizer } from "../status";
 
 export function OverviewTab({ group }: { group: Group }) {
   const organizer = isOrganizer(group);
@@ -106,6 +107,7 @@ export function OverviewTab({ group }: { group: Group }) {
 
       <InviteCard group={group} />
       {organizer && <OrganizerActions group={group} />}
+      {organizer && isFrozen(group.status) && <NextEditionCard group={group} />}
     </div>
   );
 }

@@ -94,6 +94,18 @@ function useGroupMutation<TVars>(id: string, request: (vars: TVars) => Promise<G
   });
 }
 
+export function useDuplicateGroup(id: string) {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (data: {
+      title?: string;
+      event_at?: string | null;
+      avoid_previous_pairs: boolean;
+    }) => api<Group>(`/groups/${id}/duplicate`, { method: "POST", body: data }),
+    onSuccess: () => invalidate(groupKeys.list()),
+  });
+}
+
 export function useUpdateGroup(id: string) {
   return useGroupMutation(id, (data: GroupUpdate) =>
     api<Group>(`/groups/${id}`, { method: "PATCH", body: data }),

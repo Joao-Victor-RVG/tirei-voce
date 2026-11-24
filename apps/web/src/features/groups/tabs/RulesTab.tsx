@@ -14,6 +14,7 @@ import {
   useDeletePair,
   useParticipants,
   useUpdateCircle,
+  useUpdateGroup,
 } from "../api";
 import { DrawValidationCard } from "../DrawValidationCard";
 import { isFrozen } from "../status";
@@ -46,6 +47,7 @@ export function RulesTab({ group }: { group: Group }) {
       ) : (
         <DrawValidationCard groupId={group.id} />
       )}
+      {group.previous_group_id && <PreviousPairsCard group={group} frozen={frozen} />}
       <CirclesCard
         groupId={group.id}
         circles={circles.data ?? []}
@@ -322,6 +324,31 @@ function PairsCard({
           ))}
         </ul>
       )}
+    </Card>
+  );
+}
+
+function PreviousPairsCard({ group, frozen }: { group: Group; frozen: boolean }) {
+  const update = useUpdateGroup(group.id);
+  return (
+    <Card className="space-y-2">
+      <h2 className="text-lg font-extrabold">🔁 Edição anterior</h2>
+      <label className="flex items-start gap-3">
+        <input
+          type="checkbox"
+          className="mt-1 size-5 accent-(--accent)"
+          checked={group.avoid_previous_pairs}
+          disabled={frozen || update.isPending}
+          onChange={(e) => update.mutate({ avoid_previous_pairs: e.target.checked })}
+        />
+        <span>
+          <span className="block font-bold">Não repetir os pares da edição anterior</span>
+          <span className="block text-sm text-gray-600">
+            Vale para quem participou das duas. Os pares antigos continuam secretos.
+          </span>
+        </span>
+      </label>
+      {update.isError && <Alert>{errorMessage(update.error)}</Alert>}
     </Card>
   );
 }

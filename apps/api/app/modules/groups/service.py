@@ -12,6 +12,7 @@ from app.modules.groups.models import Group, GroupStatus, GroupTheme
 from app.modules.groups.repository import GroupRepository
 from app.modules.groups.schemas import (
     GroupCreate,
+    GroupDuplicate,
     GroupOut,
     GroupSummaryOut,
     GroupUpdate,
@@ -42,7 +43,12 @@ _TRANSITION_ERRORS = {
 }
 
 # Campos que congelam depois do sorteio (afetam regras/participantes).
-_FROZEN_AFTER_DRAW = {"max_participants", "prefer_single_cycle", "draw_scheduled_at"}
+_FROZEN_AFTER_DRAW = {
+    "max_participants",
+    "prefer_single_cycle",
+    "draw_scheduled_at",
+    "avoid_previous_pairs",
+}
 
 INVITE_CODE_BYTES = 9  # token_urlsafe(9) -> 12 caracteres
 
@@ -185,7 +191,13 @@ class GroupService:
             )
         if group.status is GroupStatus.DRAWN and _FROZEN_AFTER_DRAW & changes.keys():
             ensure_not_frozen(group)
-        for required in ("title", "theme_slug", "max_participants", "prefer_single_cycle"):
+        for required in (
+            "title",
+            "theme_slug",
+            "max_participants",
+            "prefer_single_cycle",
+            "avoid_previous_pairs",
+        ):
             if required in changes and changes[required] is None:
                 raise UnprocessableError("Este campo não pode ficar vazio.", code="field_required")
 
@@ -222,6 +234,36 @@ class GroupService:
         membership.group.invite_code = await self._unique_invite_code()
         await self.session.commit()
         return await self.get(group_id, user)
+
+    async def duplicate(self, group_id: uuid.UUID, user: User, data: GroupDuplicate) -> GroupOut:
+        source = (await self.access.organizer(group_id, user)).group
+        if data.event_at and data.event_at <= datetime.now(UTC):
+            raise UnprocessableError("A data do evento precisa ser no futuro.", code="invalid_date")
+        group = Group(
+            owner_id=user.id,
+            theme_id=source.theme_id,
+            custom_name=source.custom_name,
+            title=data.title or source.title,
+            description=source.description,
+            min_value_cents=source.min_value_cents,
+            max_value_cents=source.max_value_cents,
+            event_at=data.event_at,
+            event_location=source.event_location,
+            event_maps_url=source.event_maps_url,
+            max_participants=source.max_participants,
+            prefer_single_cycle=source.prefer_single_cycle,
+            previous_group_id=source.id,
+            avoid_previous_pairs=data.avoid_previous_pairs,
+            status=GroupStatus.DRAFT,
+            invite_code=await self._unique_invite_code(),
+        )
+        await self.groups.add(group)
+        await self.participants.add(
+            Participant(group_id=group.id, user_id=user.id, role=ParticipantRole.OWNER)
+        )
+        await self.session.commit()
+        logger.info("group_duplicated", extra={"group_id": str(group.id), "from": str(source.id)})
+        return await self.get(group.id, user)
 
     # --- Convites ---
 
@@ -359,6 +401,8 @@ class GroupService:
             join_deadline_at=group.join_deadline_at,
             wishlist_deadline_at=group.wishlist_deadline_at,
             draw_scheduled_at=group.draw_scheduled_at,
+            previous_group_id=group.previous_group_id,
+            avoid_previous_pairs=group.avoid_previous_pairs,
             status=group.status,
             invite_code=group.invite_code,
             max_participants=group.max_participants,

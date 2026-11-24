@@ -245,17 +245,40 @@ class DrawService:
         people = {p.id: p for p in await self.participants.list_active(group.id)}
         circles = await self.rules.list_circles(group.id)
         pairs = await self.rules.list_pairs(group.id)
+        blocked = [
+            engine.BlockedPair(p.giver_participant_id, p.receiver_participant_id, p.bidirectional)
+            for p in pairs
+        ]
+        if group.previous_group_id and group.avoid_previous_pairs:
+            blocked += await self._previous_pairs(group.previous_group_id, people)
         rules = engine.DrawRules(
             participants=list(people),
             circles=[[m.participant_id for m in c.members] for c in circles],
-            blocked_pairs=[
-                engine.BlockedPair(
-                    p.giver_participant_id, p.receiver_participant_id, p.bidirectional
-                )
-                for p in pairs
-            ],
+            blocked_pairs=blocked,
         )
         return people, rules
+
+    async def _previous_pairs(
+        self, previous_group_id: uuid.UUID, people: dict[uuid.UUID, Participant]
+    ) -> list[engine.BlockedPair[uuid.UUID]]:
+        """Pares da edição anterior, traduzidos por usuário para os participantes atuais.
+
+        Ficam só na memória do motor: nunca são devolvidos pela API nem logados.
+        """
+        draw = await self.draws.latest(previous_group_id)
+        if draw is None:
+            return []
+        by_user = {p.user_id: p.id for p in people.values()}
+        old_users = await self.participants.user_ids_by_participant(previous_group_id)
+        blocked = []
+        for row in await self.draws.assignments(draw.id):
+            giver_user = old_users.get(row.giver_participant_id)
+            receiver_user = old_users.get(crypto.decrypt_receiver(row.receiver_encrypted))
+            giver_now = by_user.get(giver_user) if giver_user else None
+            receiver_now = by_user.get(receiver_user) if receiver_user else None
+            if giver_now and receiver_now:
+                blocked.append(engine.BlockedPair(giver_now, receiver_now))
+        return blocked
 
     @staticmethod
     def _constrained(

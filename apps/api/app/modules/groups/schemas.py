@@ -44,6 +44,7 @@ class _GroupFields(BaseModel):
     join_deadline_at: AwareDatetime | None = None
     wishlist_deadline_at: AwareDatetime | None = None
     draw_scheduled_at: AwareDatetime | None = None
+    avoid_previous_pairs: bool | None = None
     max_participants: Annotated[int, Field(ge=3, le=200)] | None = None
     prefer_single_cycle: bool | None = None
 
@@ -96,6 +97,8 @@ class GroupOut(BaseModel):
     join_deadline_at: datetime | None
     wishlist_deadline_at: datetime | None
     draw_scheduled_at: datetime | None
+    previous_group_id: uuid.UUID | None
+    avoid_previous_pairs: bool
     status: GroupStatus
     invite_code: str
     max_participants: int
@@ -135,3 +138,13 @@ class InvitePreviewOut(BaseModel):
 class JoinOut(BaseModel):
     group_id: uuid.UUID
     already_member: bool
+
+
+class GroupDuplicate(BaseModel):
+    """Nova edição: copia as configurações; as pessoas entram de novo pelo convite novo."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    title: Title | None = None
+    event_at: AwareDatetime | None = None
+    avoid_previous_pairs: bool = True

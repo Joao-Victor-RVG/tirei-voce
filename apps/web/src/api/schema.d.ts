@@ -364,6 +364,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/groups/{group_id}/duplicate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Duplicate Group
+         * @description Cria a próxima edição do grupo (ex.: Natal do ano que vem).
+         */
+        post: operations["duplicate_group_api_v1_groups__group_id__duplicate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/invites/{code}": {
         parameters: {
             query?: never;
@@ -1041,6 +1061,8 @@ export interface components {
             wishlist_deadline_at?: string | null;
             /** Draw Scheduled At */
             draw_scheduled_at?: string | null;
+            /** Avoid Previous Pairs */
+            avoid_previous_pairs?: boolean | null;
             /** Max Participants */
             max_participants?: number | null;
             /** Prefer Single Cycle */
@@ -1049,6 +1071,21 @@ export interface components {
             theme_slug: string;
             /** Title */
             title: string;
+        };
+        /**
+         * GroupDuplicate
+         * @description Nova edição: copia as configurações; as pessoas entram de novo pelo convite novo.
+         */
+        GroupDuplicate: {
+            /** Title */
+            title?: string | null;
+            /** Event At */
+            event_at?: string | null;
+            /**
+             * Avoid Previous Pairs
+             * @default true
+             */
+            avoid_previous_pairs: boolean;
         };
         /** GroupOut */
         GroupOut: {
@@ -1082,6 +1119,10 @@ export interface components {
             wishlist_deadline_at: string | null;
             /** Draw Scheduled At */
             draw_scheduled_at: string | null;
+            /** Previous Group Id */
+            previous_group_id: string | null;
+            /** Avoid Previous Pairs */
+            avoid_previous_pairs: boolean;
             status: components["schemas"]["GroupStatus"];
             /** Invite Code */
             invite_code: string;
@@ -1150,6 +1191,8 @@ export interface components {
             wishlist_deadline_at?: string | null;
             /** Draw Scheduled At */
             draw_scheduled_at?: string | null;
+            /** Avoid Previous Pairs */
+            avoid_previous_pairs?: boolean | null;
             /** Max Participants */
             max_participants?: number | null;
             /** Prefer Single Cycle */
@@ -2149,6 +2192,41 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    duplicate_group_api_v1_groups__group_id__duplicate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GroupDuplicate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };

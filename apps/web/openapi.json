@@ -841,6 +841,58 @@
         }
       }
     },
+    "/api/v1/groups/{group_id}/duplicate": {
+      "post": {
+        "tags": ["groups"],
+        "summary": "Duplicate Group",
+        "description": "Cria a próxima edição do grupo (ex.: Natal do ano que vem).",
+        "operationId": "duplicate_group_api_v1_groups__group_id__duplicate_post",
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GroupDuplicate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/invites/{code}": {
       "get": {
         "tags": ["groups", "invites"],
@@ -3099,6 +3151,17 @@
             ],
             "title": "Draw Scheduled At"
           },
+          "avoid_previous_pairs": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avoid Previous Pairs"
+          },
           "max_participants": {
             "anyOf": [
               {
@@ -3139,6 +3202,44 @@
         "type": "object",
         "required": ["theme_slug", "title"],
         "title": "GroupCreate"
+      },
+      "GroupDuplicate": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "event_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event At"
+          },
+          "avoid_previous_pairs": {
+            "type": "boolean",
+            "title": "Avoid Previous Pairs",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "GroupDuplicate",
+        "description": "Nova edição: copia as configurações; as pessoas entram de novo pelo convite novo."
       },
       "GroupOut": {
         "properties": {
@@ -3272,6 +3373,22 @@
             ],
             "title": "Draw Scheduled At"
           },
+          "previous_group_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Group Id"
+          },
+          "avoid_previous_pairs": {
+            "type": "boolean",
+            "title": "Avoid Previous Pairs"
+          },
           "status": {
             "$ref": "#/components/schemas/GroupStatus"
           },
@@ -3324,6 +3441,8 @@
           "join_deadline_at",
           "wishlist_deadline_at",
           "draw_scheduled_at",
+          "previous_group_id",
+          "avoid_previous_pairs",
           "status",
           "invite_code",
           "max_participants",
@@ -3521,6 +3640,17 @@
               }
             ],
             "title": "Draw Scheduled At"
+          },
+          "avoid_previous_pairs": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avoid Previous Pairs"
           },
           "max_participants": {
             "anyOf": [
