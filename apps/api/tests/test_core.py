@@ -1,3 +1,4 @@
+import itertools
 import uuid
 
 import httpx
@@ -98,6 +99,23 @@ async def test_cors_allows_only_frontend(client: httpx.AsyncClient) -> None:
 
 def test_uuid7_is_version_7_and_time_ordered() -> None:
     ids = [uuid7() for _ in range(100)]
-    assert all(isinstance(i, uuid.UUID) and i.version == 7 for i in ids)
+    assert all(
+        isinstance(i, uuid.UUID) and i.version == 7 and i.variant == uuid.RFC_4122 for i in ids
+    )
     assert [i.bytes[:6] for i in ids] == sorted(i.bytes[:6] for i in ids)
     assert len(set(ids)) == 100
+
+
+def test_uuid7_is_strictly_monotonic_within_the_same_millisecond() -> None:
+    # Milhares de ids caem no mesmo milissegundo: ainda assim saem sempre em ordem.
+    ids = [uuid7() for _ in range(20_000)]
+    assert all(a < b for a, b in itertools.pairwise(ids))
+
+
+def test_uuid7_keeps_order_if_clock_goes_back(monkeypatch: pytest.MonkeyPatch) -> None:
+    import time
+
+    first = uuid7()
+    monkeypatch.setattr(time, "time_ns", lambda: 0)  # relógio "voltou" para 1970
+    second = uuid7()
+    assert second > first
