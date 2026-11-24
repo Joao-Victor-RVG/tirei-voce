@@ -10,6 +10,7 @@ import { useDrawValidation, useExecuteDraw, useUpdateGroup } from "../api";
 import { DrawValidationCard } from "../DrawValidationCard";
 import { GiftProgressCard } from "../GiftProgressCard";
 import { RevealCard } from "../RevealCard";
+import { SantaRevealCard } from "../SantaRevealCard";
 import { isDrawn, isOrganizer } from "../status";
 
 export function DrawTab({ group }: { group: Group }) {
@@ -17,6 +18,7 @@ export function DrawTab({ group }: { group: Group }) {
     return (
       <div className="space-y-4">
         {isOrganizer(group) && <GiftProgressCard groupId={group.id} />}
+        <SantaRevealCard group={group} />
         <RevealCard group={group} />
       </div>
     );

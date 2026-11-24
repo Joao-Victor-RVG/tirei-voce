@@ -1,4 +1,5 @@
 import uuid
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header
@@ -13,6 +14,7 @@ from app.modules.draws.schemas import (
     GiftStatusIn,
     GiftStatusOut,
     MyMatchOut,
+    MySantaOut,
 )
 from app.modules.draws.service import DrawService
 
@@ -62,3 +64,9 @@ async def gift_progress(
 ) -> GiftProgressOut:
     """Para a organização: quantos já compraram, sem dizer quem."""
     return await service.gift_progress(group_id, user)
+
+
+@router.get("/my-santa", response_model=MySantaOut)
+async def my_santa(group_id: uuid.UUID, user: CurrentUser, service: Service) -> MySantaOut:
+    """Revelação: a partir do horário do evento, mostra quem tirou o usuário (só isso)."""
+    return await service.my_santa(group_id, user, datetime.now(UTC))

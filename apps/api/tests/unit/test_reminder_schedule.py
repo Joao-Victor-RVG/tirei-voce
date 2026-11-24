@@ -28,8 +28,9 @@ def kinds(
         (timedelta(hours=3), [ReminderKind.EVENT_1D]),
         (timedelta(hours=2), [ReminderKind.EVENT_2H]),
         (timedelta(minutes=5), [ReminderKind.EVENT_2H]),
-        (timedelta(0), []),
-        (-timedelta(hours=1), []),
+        (timedelta(0), [ReminderKind.REVEAL]),
+        (-timedelta(hours=1), [ReminderKind.REVEAL]),
+        (-timedelta(hours=12), []),
     ],
 )
 def test_event_windows(before_event: timedelta, expected: list[ReminderKind]) -> None:
@@ -58,3 +59,7 @@ def test_target_is_the_reference_moment() -> None:
         now=EVENT - timedelta(hours=1),
     )
     assert due[0].target_at == EVENT
+
+
+def test_reveal_only_for_drawn_groups() -> None:
+    assert kinds(EVENT + timedelta(minutes=5), status=GroupStatus.OPEN) == []

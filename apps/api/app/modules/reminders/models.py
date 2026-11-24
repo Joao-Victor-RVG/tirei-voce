@@ -13,6 +13,7 @@ class ReminderKind(enum.StrEnum):
     WISHLIST_DEADLINE = "wishlist_deadline"  # 1 dia antes do prazo da lista
     EVENT_1D = "event_1d"  # 1 dia antes do evento
     EVENT_2H = "event_2h"  # 2 horas antes do evento
+    REVEAL = "reveal"  # no horário do evento: hora de descobrir quem te tirou
 
 
 class SentReminder(UUIDPrimaryKey, Timestamps, Base):

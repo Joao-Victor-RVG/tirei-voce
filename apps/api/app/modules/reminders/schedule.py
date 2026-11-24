@@ -10,6 +10,7 @@ ACTIVE_STATUSES = (GroupStatus.OPEN, GroupStatus.CLOSED, GroupStatus.DRAWN)
 
 ONE_DAY = timedelta(days=1)
 TWO_HOURS = timedelta(hours=2)
+REVEAL_WINDOW = timedelta(hours=12)
 
 
 @dataclass(frozen=True)
@@ -39,4 +40,6 @@ def due_reminders(
             due.append(DueReminder(ReminderKind.EVENT_1D, event_at))
         elif event_at - TWO_HOURS <= now < event_at:
             due.append(DueReminder(ReminderKind.EVENT_2H, event_at))
+        elif status is GroupStatus.DRAWN and event_at <= now < event_at + REVEAL_WINDOW:
+            due.append(DueReminder(ReminderKind.REVEAL, event_at))
     return due

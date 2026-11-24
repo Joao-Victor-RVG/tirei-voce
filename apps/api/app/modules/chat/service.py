@@ -12,6 +12,7 @@ from app.modules.chat.schemas import ChatMessageOut, ChatMessagePage, ChatThread
 from app.modules.draws import crypto
 from app.modules.draws.models import DrawAssignment
 from app.modules.draws.repository import DrawRepository
+from app.modules.draws.service import is_revealed
 from app.modules.groups.models import GroupStatus
 from app.modules.groups.service import GroupAccess, Membership
 from app.modules.notifications import events
@@ -53,7 +54,7 @@ class ChatService:
             summaries.append(
                 ChatThreadSummary(
                     thread=chat.thread,
-                    title=await self._title(chat),
+                    title=await self._title(chat, membership),
                     unread=await self.repo.unread(chat.assignment.id, chat.other_role),
                     last_message=self._out(last, chat) if last else None,
                 )
@@ -124,8 +125,13 @@ class ChatService:
         role = SenderRole.GIVER if thread == "match" else SenderRole.RECEIVER
         return ChatThread(thread=thread, assignment=assignment, my_role=role)
 
-    async def _title(self, chat: ChatThread) -> str:
+    async def _title(self, chat: ChatThread, membership: Membership) -> str:
         if chat.thread == "santa":
+            # Depois da revelação, a conversa anônima ganha o nome de quem tirou.
+            if is_revealed(membership.group, datetime.now(UTC)):
+                giver = await self.participants.get_by_id(chat.assignment.giver_participant_id)
+                if giver is not None:
+                    return giver.user.name
             return ANONYMOUS_TITLE
         receiver = await self.participants.get_by_id(
             crypto.decrypt_receiver(chat.assignment.receiver_encrypted)

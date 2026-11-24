@@ -15,7 +15,13 @@ from app.modules.notifications.email import EmailSender
 from app.modules.notifications.push import PushMessage, send_to_users
 from app.modules.participants.models import Participant
 from app.modules.reminders.models import ReminderKind, SentReminder
-from app.modules.reminders.schedule import ACTIVE_STATUSES, ONE_DAY, DueReminder, due_reminders
+from app.modules.reminders.schedule import (
+    ACTIVE_STATUSES,
+    ONE_DAY,
+    REVEAL_WINDOW,
+    DueReminder,
+    due_reminders,
+)
 from app.modules.users.models import User
 from app.modules.wishlist.models import WishlistItem
 
@@ -50,6 +56,13 @@ def content_for(group: Group, reminder: DueReminder) -> ReminderContent:
             "Dê umas dicas para o seu amigo secreto não errar!",
             push_title="📝 Sua lista de desejos está vazia",
         )
+    if reminder.kind is ReminderKind.REVEAL:
+        return ReminderContent(
+            subject=f"Hora da revelação! {group.title} 🎉",
+            headline="Quem será que te tirou? 🎉",
+            body=f"Chegou a hora de {name}! Abra o app e descubra quem foi seu amigo secreto.",
+            push_title="🎉 Hora da revelação!",
+        )
     if reminder.kind is ReminderKind.EVENT_1D:
         return ReminderContent(
             subject=f"É amanhã! {group.title} 🎁",
@@ -79,7 +92,7 @@ class ReminderService:
             .where(
                 Group.status.in_(ACTIVE_STATUSES),
                 or_(
-                    Group.event_at.between(now, horizon),
+                    Group.event_at.between(now - REVEAL_WINDOW, horizon),
                     Group.wishlist_deadline_at.between(now, horizon),
                 ),
             )

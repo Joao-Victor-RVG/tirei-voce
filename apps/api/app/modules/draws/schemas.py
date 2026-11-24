@@ -53,3 +53,11 @@ class MyMatchOut(BaseModel):
     wishlist: list[WishlistItemOut]
     preferences: PreferencesOut
     gift_purchased: bool
+
+
+class MySantaOut(BaseModel):
+    """Revelação no dia do evento: só quem tirou o próprio usuário."""
+
+    participant_id: uuid.UUID
+    name: str
+    avatar_url: str | None

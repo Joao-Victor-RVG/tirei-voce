@@ -31,6 +31,12 @@ class DrawRepository:
         purchased, total = (await self.session.execute(stmt)).one()
         return int(purchased), int(total)
 
+    async def assignment_by_lookup(self, draw_id: uuid.UUID, lookup: str) -> DrawAssignment | None:
+        stmt = select(DrawAssignment).where(
+            DrawAssignment.draw_id == draw_id, DrawAssignment.receiver_lookup_hash == lookup
+        )
+        return await self.session.scalar(stmt)
+
     async def assignments(self, draw_id: uuid.UUID) -> list[DrawAssignment]:
         stmt = select(DrawAssignment).where(DrawAssignment.draw_id == draw_id)
         return list((await self.session.scalars(stmt)).all())

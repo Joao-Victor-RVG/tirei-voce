@@ -552,3 +552,30 @@ test("organização cria a próxima edição sem repetir pares", async () => {
     avoid_previous_pairs: true,
   });
 });
+
+test("revelação de quem me tirou só depois do evento", async () => {
+  mockApi((url) => {
+    const path = url.pathname.replace("/api/v1", "");
+    if (path === "/me") return json(ME);
+    if (path === "/groups/g1")
+      return json(group({ status: "DRAWN", my_role: "member", event_at: "2020-12-24T23:00:00Z" }));
+    if (path === "/groups/g1/my-santa")
+      return json({ participant_id: "p9", name: "Duda", avatar_url: null });
+  });
+  renderRoute("/groups/g1?tab=draw");
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: /Revelar/ }));
+  expect(await screen.findByText("Quem te tirou foi")).toBeInTheDocument();
+  expect(screen.getByText("Duda")).toBeInTheDocument();
+});
+
+test("antes do evento mostra contagem para a revelação", async () => {
+  const calls = mockApi((url) => {
+    const path = url.pathname.replace("/api/v1", "");
+    if (path === "/me") return json(ME);
+    if (path === "/groups/g1") return json(group({ status: "DRAWN", my_role: "member" }));
+  });
+  renderRoute("/groups/g1?tab=draw");
+  expect(await screen.findByText(/A revelação abre no horário do evento/)).toBeInTheDocument();
+  expect(calls.some((c) => c.path === "/groups/g1/my-santa")).toBe(false);
+});

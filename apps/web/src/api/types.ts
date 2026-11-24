@@ -24,6 +24,7 @@ export type BlockedPair = Schemas["BlockedPairOut"];
 export type DrawValidation = Schemas["DrawValidationOut"];
 export type DrawResult = Schemas["DrawOut"];
 export type MyMatch = Schemas["MyMatchOut"];
+export type MySanta = Schemas["MySantaOut"];
 export type GiftProgress = Schemas["GiftProgressOut"];
 export type ChatThreadSummary = Schemas["ChatThreadSummary"];
 export type ChatMessage = Schemas["ChatMessageOut"];

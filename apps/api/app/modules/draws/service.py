@@ -19,6 +19,7 @@ from app.modules.draws.schemas import (
     GiftProgressOut,
     GiftStatusOut,
     MyMatchOut,
+    MySantaOut,
 )
 from app.modules.groups.models import Group, GroupStatus
 from app.modules.groups.repository import GroupRepository
@@ -38,6 +39,15 @@ IDEMPOTENCY_TTL_SECONDS = 24 * 3600
 IMPOSSIBLE_MESSAGE = (
     "Com as restrições atuais não existe sorteio possível. Revise os círculos/pares bloqueados."
 )
+
+
+def is_revealed(group: Group, now: datetime) -> bool:
+    """A revelação abre no horário do evento, para grupos já sorteados."""
+    return (
+        group.status in (GroupStatus.DRAWN, GroupStatus.FINISHED)
+        and group.event_at is not None
+        and now >= group.event_at
+    )
 
 
 @dataclass(frozen=True)
@@ -199,6 +209,30 @@ class DrawService:
             ),
             gift_purchased=mine.gift_purchased_at is not None,
         )
+
+    async def my_santa(self, group_id: uuid.UUID, user: User, now: datetime) -> MySantaOut:
+        membership, _ = await self._my_assignment(group_id, user)
+        if not is_revealed(membership.group, now):
+            raise ConflictError(
+                "A revelação acontece no horário do evento.", code="reveal_not_available"
+            )
+        giver = await self.santa_of(membership)
+        if giver is None:  # pragma: no cover - todo participante sorteado tem quem o tirou
+            raise ConflictError("Não encontramos quem te tirou.", code="santa_missing")
+        return MySantaOut(
+            participant_id=giver.id, name=giver.user.name, avatar_url=giver.user.avatar_url
+        )
+
+    async def santa_of(self, membership: Membership) -> Participant | None:
+        """Quem tirou o participante, pelo hash de busca (o par nunca fica em claro)."""
+        draw = await self.draws.latest(membership.group.id)
+        if draw is None:
+            return None
+        lookup = crypto.receiver_lookup_hash(draw.id, membership.participant.id)
+        assignment = await self.draws.assignment_by_lookup(draw.id, lookup)
+        if assignment is None:
+            return None
+        return await self.participants.get_by_id(assignment.giver_participant_id)
 
     async def set_gift_purchased(
         self, group_id: uuid.UUID, user: User, purchased: bool

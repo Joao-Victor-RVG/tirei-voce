@@ -741,6 +741,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/groups/{group_id}/my-santa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My Santa
+         * @description Revelação: a partir do horário do evento, mostra quem tirou o usuário (só isso).
+         */
+        get: operations["my_santa_api_v1_groups__group_id__my_santa_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/groups/{group_id}/chats": {
         parameters: {
             query?: never;
@@ -1330,6 +1350,21 @@ export interface components {
             preferences: components["schemas"]["PreferencesOut"];
             /** Gift Purchased */
             gift_purchased: boolean;
+        };
+        /**
+         * MySantaOut
+         * @description Revelação no dia do evento: só quem tirou o próprio usuário.
+         */
+        MySantaOut: {
+            /**
+             * Participant Id
+             * Format: uuid
+             */
+            participant_id: string;
+            /** Name */
+            name: string;
+            /** Avatar Url */
+            avatar_url: string | null;
         };
         /** Page[GroupSummaryOut] */
         Page_GroupSummaryOut_: {
@@ -3140,6 +3175,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GiftProgressOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    my_santa_api_v1_groups__group_id__my_santa_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MySantaOut"];
                 };
             };
             /** @description Validation Error */

@@ -2240,6 +2240,48 @@
         }
       }
     },
+    "/api/v1/groups/{group_id}/my-santa": {
+      "get": {
+        "tags": ["draws"],
+        "summary": "My Santa",
+        "description": "Revelação: a partir do horário do evento, mostra quem tirou o usuário (só isso).",
+        "operationId": "my_santa_api_v1_groups__group_id__my_santa_get",
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MySantaOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/groups/{group_id}/chats": {
       "get": {
         "tags": ["chat"],
@@ -4106,6 +4148,34 @@
           "gift_purchased"
         ],
         "title": "MyMatchOut"
+      },
+      "MySantaOut": {
+        "properties": {
+          "participant_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Participant Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          }
+        },
+        "type": "object",
+        "required": ["participant_id", "name", "avatar_url"],
+        "title": "MySantaOut",
+        "description": "Revelação no dia do evento: só quem tirou o próprio usuário."
       },
       "Page_GroupSummaryOut_": {
         "properties": {

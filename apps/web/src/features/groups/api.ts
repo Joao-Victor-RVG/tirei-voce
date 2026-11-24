@@ -20,6 +20,7 @@ import type {
   InvitePreview,
   JoinResult,
   MyMatch,
+  MySanta,
   Participant,
   Preferences,
   Theme,
@@ -363,5 +364,14 @@ export function useGiftProgress(id: string, enabled: boolean) {
     queryKey: groupKeys.giftProgress(id),
     queryFn: () => api<GiftProgress>(`/groups/${id}/gift-progress`),
     enabled,
+  });
+}
+
+export function useMySanta(id: string, enabled: boolean) {
+  return useQuery({
+    queryKey: [...groupKeys.all, id, "santa"] as const,
+    queryFn: () => api<MySanta>(`/groups/${id}/my-santa`),
+    enabled,
+    staleTime: Infinity,
   });
 }
