@@ -2,7 +2,7 @@ COMPOSE := docker compose -f infra/docker-compose.yml
 API := cd apps/api &&
 WEB := cd apps/web &&
 
-.PHONY: dev down logs migrate migration seed test test-api test-web lint lint-api lint-web format help
+.PHONY: dev down logs migrate migration seed keys test test-api test-web lint lint-api lint-web format help
 
 dev: ## Sobe tudo (postgres, redis, api, worker, web) com hot reload
 	$(COMPOSE) up --build
@@ -18,6 +18,12 @@ migrate: ## Aplica as migrations (com o compose rodando)
 
 seed: ## Carrega os dados iniciais (temas); idempotente
 	$(COMPOSE) exec api python -m app.seed
+
+keys: ## Gera segredos novos para JWT_SECRET, DRAW_ENCRYPTION_KEY e DRAW_HMAC_KEY
+	@cd apps/api && uv run python -c "import secrets; from cryptography.fernet import Fernet; \
+	print('JWT_SECRET=' + secrets.token_urlsafe(48)); \
+	print('DRAW_ENCRYPTION_KEY=' + Fernet.generate_key().decode()); \
+	print('DRAW_HMAC_KEY=' + secrets.token_urlsafe(48))"
 
 migration: ## Gera uma migration: make migration m="descricao"
 	$(COMPOSE) exec api alembic revision --autogenerate -m "$(m)"

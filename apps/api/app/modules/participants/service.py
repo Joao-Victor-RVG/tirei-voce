@@ -10,6 +10,7 @@ from app.modules.groups.service import GroupAccess, ensure_not_frozen
 from app.modules.participants.models import Participant
 from app.modules.participants.repository import ParticipantRepository
 from app.modules.participants.schemas import ParticipantOut
+from app.modules.rules.repository import RulesRepository
 from app.modules.users.models import User
 
 logger = logging.getLogger(__name__)
@@ -46,6 +47,7 @@ class ParticipantService:
 
     async def _deactivate(self, participant: Participant) -> None:
         participant.left_at = datetime.now(UTC)
+        await RulesRepository(self.session).remove_participant(participant.id)
         await self.session.commit()
 
     @staticmethod

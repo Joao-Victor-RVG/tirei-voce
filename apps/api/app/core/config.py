@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     jwt_secret: str = "dev-insecure-jwt-secret-change-me-0123456789"  # noqa: S105
     access_token_ttl_minutes: int = 15
     refresh_token_ttl_days: int = 30
+    # Fernet (base64 de 32 bytes) e HMAC do sorteio. Gere com: make keys
+    draw_encryption_key: str = "ZGV2LWluc2VjdXJlLWRyYXcta2V5LTAxMjM0NTY3ODk="
+    draw_hmac_key: str = "dev-insecure-draw-hmac-key-0123456789"
     cookie_secure: bool = True
     cookie_domain: str | None = None
 
@@ -43,6 +46,10 @@ class Settings(BaseSettings):
         if self.is_production:
             if self.jwt_secret.startswith("dev-insecure") or len(self.jwt_secret) < 32:
                 raise ValueError("JWT_SECRET precisa ter pelo menos 32 caracteres em produção")
+            if self.draw_encryption_key.startswith("ZGV2LWluc2VjdXJl"):
+                raise ValueError("DRAW_ENCRYPTION_KEY precisa ser definido em produção")
+            if self.draw_hmac_key.startswith("dev-insecure") or len(self.draw_hmac_key) < 32:
+                raise ValueError("DRAW_HMAC_KEY precisa ter pelo menos 32 caracteres em produção")
             if self.email_provider == "resend" and not self.resend_api_key:
                 raise ValueError("RESEND_API_KEY é obrigatório com EMAIL_PROVIDER=resend")
             if not self.cookie_secure:

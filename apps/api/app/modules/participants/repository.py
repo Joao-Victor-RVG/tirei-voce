@@ -22,6 +22,14 @@ class ParticipantRepository:
         )
         return await self.session.scalar(stmt)
 
+    async def get_by_id(self, participant_id: uuid.UUID) -> Participant | None:
+        stmt = (
+            select(Participant)
+            .options(selectinload(Participant.user))
+            .where(Participant.id == participant_id)
+        )
+        return await self.session.scalar(stmt)
+
     async def get_active(
         self, group_id: uuid.UUID, participant_id: uuid.UUID
     ) -> Participant | None:

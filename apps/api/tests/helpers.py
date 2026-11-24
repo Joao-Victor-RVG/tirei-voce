@@ -72,3 +72,15 @@ async def create_group(
 
 async def join(client: httpx.AsyncClient, invite_code: str) -> httpx.Response:
     return await client.post(f"/api/v1/invites/{invite_code}/join")
+
+
+async def group_with_members(
+    owner: httpx.AsyncClient, members: list[httpx.AsyncClient], **overrides: Any
+) -> tuple[dict[str, Any], dict[str, str]]:
+    """Cria um grupo aberto com os membros e devolve (grupo, {nome: participant_id})."""
+    group = await create_group(owner, open_=True, **overrides)
+    for member in members:
+        response = await join(member, group["invite_code"])
+        assert response.status_code == 200, response.text
+    people = (await owner.get(f"/api/v1/groups/{group['id']}/participants")).json()
+    return group, {p["user"]["name"]: p["id"] for p in people}
