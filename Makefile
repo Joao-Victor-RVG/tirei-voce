@@ -2,7 +2,7 @@ COMPOSE := docker compose -f infra/docker-compose.yml
 API := cd apps/api &&
 WEB := cd apps/web &&
 
-.PHONY: dev down logs migrate migration seed keys api-types test test-api test-web lint lint-api lint-web format help
+.PHONY: dev down logs migrate migration seed keys api-types prod-up prod-down test test-api test-web lint lint-api lint-web format help
 
 dev: ## Sobe tudo (postgres, redis, api, worker, web) com hot reload
 	$(COMPOSE) up --build
@@ -31,6 +31,12 @@ migration: ## Gera uma migration: make migration m="descricao"
 api-types: ## Regenera openapi.json e os tipos TypeScript do frontend
 	$(API) uv run python -m app.export_openapi ../web/openapi.json
 	$(WEB) pnpm gen:api && pnpm exec prettier --write openapi.json >/dev/null
+
+prod-up: ## Sobe as imagens de produção localmente em http://localhost:8080
+	docker compose --env-file .env -f infra/docker-compose.prod.yml up --build
+
+prod-down:
+	docker compose --env-file .env -f infra/docker-compose.prod.yml down
 
 test: test-api test-web ## Roda todos os testes
 

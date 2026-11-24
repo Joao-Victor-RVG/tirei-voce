@@ -1,0 +1,72 @@
+# Simula a produção localmente (imagens finais, nginx na frente, API sem porta pública).
+# Uso: make prod-up  (lê o .env da raiz; gere os segredos com make keys)
+name: tirei-voce-prod
+
+x-api-env: &api-env
+  environment:
+    ENVIRONMENT: production
+    JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET (make keys)}
+    DRAW_ENCRYPTION_KEY: ${DRAW_ENCRYPTION_KEY:?defina DRAW_ENCRYPTION_KEY (make keys)}
+    DRAW_HMAC_KEY: ${DRAW_HMAC_KEY:?defina DRAW_HMAC_KEY (make keys)}
+    EMAIL_PROVIDER: ${EMAIL_PROVIDER:-console}
+    RESEND_API_KEY: ${RESEND_API_KEY:-}
+    GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+    GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+    GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost:8080/api/v1/auth/google/callback}
+    DATABASE_URL: postgresql+asyncpg://tirei:tirei@postgres:5432/tirei_voce
+    REDIS_URL: redis://redis:6379/0
+    FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: tirei
+      POSTGRES_PASSWORD: tirei
+      POSTGRES_DB: tirei_voce
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tirei -d tirei_voce"]
+      interval: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      retries: 20
+
+  migrate:
+    build: { context: ../apps/api, target: api }
+    <<: *api-env
+    command: sh -c "alembic upgrade head && python -m app.seed"
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  api:
+    build: { context: ../apps/api, target: api }
+    <<: *api-env
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+
+  worker:
+    build: { context: ../apps/api, target: worker }
+    <<: *api-env
+    depends_on:
+      redis: { condition: service_healthy }
+
+  web:
+    build: { context: ../apps/web, target: web }
+    environment:
+      API_UPSTREAM: http://api:8000
+      REAL_IP_FROM: 172.16.0.0/12
+    ports:
+      - "8080:8080"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:

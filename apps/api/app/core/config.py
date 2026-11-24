@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -40,6 +40,15 @@ class Settings(BaseSettings):
 
     sentry_dsn: str | None = None
     sentry_traces_sample_rate: float = 0.0
+
+    @field_validator("database_url")
+    @classmethod
+    def _use_asyncpg(cls, value: str) -> str:
+        """Render/Railway entregam postgres:// ou postgresql://; o SQLAlchemy async quer asyncpg."""
+        for prefix in ("postgres://", "postgresql://"):
+            if value.startswith(prefix):
+                return "postgresql+asyncpg://" + value.removeprefix(prefix)
+        return value
 
     @model_validator(mode="after")
     def _check_production_secrets(self) -> "Settings":
