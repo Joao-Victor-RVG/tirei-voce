@@ -7,11 +7,18 @@ import { Alert, Button, Card, EmptyState } from "@/components/ui";
 
 import { useDrawValidation, useExecuteDraw } from "../api";
 import { DrawValidationCard } from "../DrawValidationCard";
+import { GiftProgressCard } from "../GiftProgressCard";
 import { RevealCard } from "../RevealCard";
 import { isDrawn, isOrganizer } from "../status";
 
 export function DrawTab({ group }: { group: Group }) {
-  if (isDrawn(group.status)) return <RevealCard group={group} />;
+  if (isDrawn(group.status))
+    return (
+      <div className="space-y-4">
+        {isOrganizer(group) && <GiftProgressCard groupId={group.id} />}
+        <RevealCard group={group} />
+      </div>
+    );
   if (isOrganizer(group)) return <OrganizerDraw group={group} />;
   return (
     <Card>

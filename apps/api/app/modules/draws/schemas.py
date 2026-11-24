@@ -29,6 +29,21 @@ class DrawOut(BaseModel):
     participant_count: int
 
 
+class GiftStatusIn(BaseModel):
+    purchased: bool
+
+
+class GiftStatusOut(BaseModel):
+    purchased: bool
+
+
+class GiftProgressOut(BaseModel):
+    """Só números agregados: nunca diz quem comprou para quem."""
+
+    purchased: int
+    total: int
+
+
 class MyMatchOut(BaseModel):
     participant_id: uuid.UUID
     name: str
@@ -37,3 +52,4 @@ class MyMatchOut(BaseModel):
     shoe_size: str | None
     wishlist: list[WishlistItemOut]
     preferences: PreferencesOut
+    gift_purchased: bool

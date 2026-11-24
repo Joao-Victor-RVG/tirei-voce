@@ -2,10 +2,10 @@ import { useState } from "react";
 
 import { errorMessage } from "@/api/client";
 import type { Group } from "@/api/types";
-import { Avatar, Button, Card, ErrorState, PageLoader } from "@/components/ui";
+import { Alert, Avatar, Button, Card, ErrorState, PageLoader } from "@/components/ui";
 import { formatValueRange } from "@/lib/format";
 
-import { useMyMatch } from "./api";
+import { useMyMatch, useSetGiftPurchased } from "./api";
 import { WishlistItemView } from "./WishlistItemView";
 
 const CONFETTI = ["🎉", "✨", "🎊", "💝", "⭐", "🎁"];
@@ -26,6 +26,7 @@ export function RevealCard({ group }: { group: Group }) {
   const [revealed, setRevealed] = useState(() => wasRevealed(group.id));
   const [animate, setAnimate] = useState(false);
   const match = useMyMatch(group.id, revealed);
+  const gift = useSetGiftPurchased(group.id);
 
   const reveal = () => {
     setRevealed(true);
@@ -108,6 +109,30 @@ export function RevealCard({ group }: { group: Group }) {
           </div>
         )}
       </Card>
+
+      <Card className="flex flex-col items-center gap-3 text-center sm:flex-row sm:text-left">
+        <span className="text-4xl" aria-hidden>
+          {person.gift_purchased ? "✅" : "🛍️"}
+        </span>
+        <div className="flex-1">
+          <p className="font-extrabold">
+            {person.gift_purchased ? "Presente comprado!" : "Já comprou o presente?"}
+          </p>
+          <p className="text-sm text-gray-600">
+            A organização só vê quantas pessoas já compraram, nunca quem.
+          </p>
+        </div>
+        <Button
+          variant={person.gift_purchased ? "secondary" : "primary"}
+          loading={gift.isPending}
+          disabled={group.status === "FINISHED"}
+          aria-pressed={person.gift_purchased}
+          onClick={() => gift.mutate(!person.gift_purchased)}
+        >
+          {person.gift_purchased ? "Desmarcar" : "Já comprei 🎁"}
+        </Button>
+      </Card>
+      {gift.isError && <Alert>{errorMessage(gift.error)}</Alert>}
 
       <Card className="space-y-3">
         <h3 className="text-lg font-extrabold">Lista de desejos de {person.name}</h3>

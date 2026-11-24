@@ -24,3 +24,4 @@ export type BlockedPair = Schemas["BlockedPairOut"];
 export type DrawValidation = Schemas["DrawValidationOut"];
 export type DrawResult = Schemas["DrawOut"];
 export type MyMatch = Schemas["MyMatchOut"];
+export type GiftProgress = Schemas["GiftProgressOut"];

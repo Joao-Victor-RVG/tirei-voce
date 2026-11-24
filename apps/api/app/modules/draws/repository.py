@@ -24,6 +24,13 @@ class DrawRepository:
         self.session.add_all(assignments)
         await self.session.flush()
 
+    async def gift_progress(self, draw_id: uuid.UUID) -> tuple[int, int]:
+        stmt = select(
+            func.count(DrawAssignment.gift_purchased_at), func.count(DrawAssignment.id)
+        ).where(DrawAssignment.draw_id == draw_id)
+        purchased, total = (await self.session.execute(stmt)).one()
+        return int(purchased), int(total)
+
     async def assignment_for_giver(
         self, draw_id: uuid.UUID, giver_participant_id: uuid.UUID
     ) -> DrawAssignment | None:

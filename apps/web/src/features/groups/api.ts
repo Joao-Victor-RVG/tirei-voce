@@ -12,6 +12,7 @@ import type {
   Circle,
   DrawResult,
   DrawValidation,
+  GiftProgress,
   Group,
   GroupCreate,
   GroupPage,
@@ -38,6 +39,7 @@ export const groupKeys = {
   pairs: (id: string) => [...groupKeys.all, id, "pairs"] as const,
   validation: (id: string) => [...groupKeys.all, id, "validation"] as const,
   match: (id: string) => [...groupKeys.all, id, "match"] as const,
+  giftProgress: (id: string) => [...groupKeys.all, id, "gift-progress"] as const,
 };
 
 function useInvalidate() {
@@ -324,5 +326,30 @@ export function useMyMatch(id: string, enabled: boolean) {
     queryFn: () => api<MyMatch>(`/groups/${id}/my-match`),
     enabled,
     staleTime: 60_000,
+  });
+}
+
+export function useSetGiftPurchased(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (purchased: boolean) =>
+      api<{ purchased: boolean }>(`/groups/${id}/my-match/gift`, {
+        method: "PUT",
+        body: { purchased },
+      }),
+    onSuccess: async ({ purchased }) => {
+      queryClient.setQueryData<MyMatch>(groupKeys.match(id), (old) =>
+        old ? { ...old, gift_purchased: purchased } : old,
+      );
+      await queryClient.invalidateQueries({ queryKey: groupKeys.giftProgress(id) });
+    },
+  });
+}
+
+export function useGiftProgress(id: string, enabled: boolean) {
+  return useQuery({
+    queryKey: groupKeys.giftProgress(id),
+    queryFn: () => api<GiftProgress>(`/groups/${id}/gift-progress`),
+    enabled,
   });
 }

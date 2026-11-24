@@ -6,7 +6,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_session
 from app.modules.auth.dependencies import CurrentUser
-from app.modules.draws.schemas import DrawOut, DrawValidationOut, MyMatchOut
+from app.modules.draws.schemas import (
+    DrawOut,
+    DrawValidationOut,
+    GiftProgressOut,
+    GiftStatusIn,
+    GiftStatusOut,
+    MyMatchOut,
+)
 from app.modules.draws.service import DrawService
 
 router = APIRouter(prefix="/groups/{group_id}", tags=["draws"])
@@ -40,3 +47,18 @@ async def execute_draw(
 async def my_match(group_id: uuid.UUID, user: CurrentUser, service: Service) -> MyMatchOut:
     """O único endpoint que revela um par: o amigo secreto de quem está logado."""
     return await service.my_match(group_id, user)
+
+
+@router.put("/my-match/gift", response_model=GiftStatusOut)
+async def set_gift_status(
+    group_id: uuid.UUID, data: GiftStatusIn, user: CurrentUser, service: Service
+) -> GiftStatusOut:
+    return await service.set_gift_purchased(group_id, user, data.purchased)
+
+
+@router.get("/gift-progress", response_model=GiftProgressOut)
+async def gift_progress(
+    group_id: uuid.UUID, user: CurrentUser, service: Service
+) -> GiftProgressOut:
+    """Para a organização: quantos já compraram, sem dizer quem."""
+    return await service.gift_progress(group_id, user)

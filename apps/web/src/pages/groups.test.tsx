@@ -273,7 +273,9 @@ test("revelação: só busca o par ao tocar e mostra a lista", async () => {
           },
         ],
         preferences: { dislikes: "Perfume", notes: null },
+        gift_purchased: false,
       });
+    if (path === "/groups/g1/my-match/gift") return json({ purchased: true });
   });
   renderRoute("/groups/g1");
   const user = userEvent.setup();
@@ -287,6 +289,12 @@ test("revelação: só busca o par ao tocar e mostra a lista", async () => {
   expect(screen.getByText("👕 G")).toBeInTheDocument();
   expect(localStorage.getItem("tv_revealed:g1")).toBe("1");
   expect(JSON.stringify(localStorage)).not.toContain("Caio");
+
+  await user.click(screen.getByRole("button", { name: /Já comprei/ }));
+  expect(await screen.findByText("Presente comprado!")).toBeInTheDocument();
+  expect(calls.find((c) => c.path === "/groups/g1/my-match/gift")?.body).toEqual({
+    purchased: true,
+  });
 });
 
 test("convite sem login oferece cadastro e volta para o convite", async () => {
@@ -412,4 +420,19 @@ test("dono promove coorganizador e coorganizador vê a aba Regras", async () => 
   });
   renderRoute("/groups/g1");
   expect((await screen.findAllByRole("tab", { name: "Regras" })).length).toBeGreaterThan(0);
+});
+
+test("organização vê só o progresso agregado dos presentes", async () => {
+  mockApi((url) => {
+    const path = url.pathname.replace("/api/v1", "");
+    if (path === "/me") return json(ME);
+    if (path === "/groups/g1") return json(group({ status: "DRAWN" }));
+    if (path === "/groups/g1/gift-progress") return json({ purchased: 3, total: 8 });
+  });
+  renderRoute("/groups/g1?tab=draw");
+  expect(await screen.findByText("3 de 8")).toBeInTheDocument();
+  expect(screen.getByRole("progressbar", { name: "Presentes comprados" })).toHaveAttribute(
+    "aria-valuenow",
+    "3",
+  );
 });

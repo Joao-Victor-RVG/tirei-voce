@@ -2094,6 +2094,99 @@
           }
         }
       }
+    },
+    "/api/v1/groups/{group_id}/my-match/gift": {
+      "put": {
+        "tags": ["draws"],
+        "summary": "Set Gift Status",
+        "operationId": "set_gift_status_api_v1_groups__group_id__my_match_gift_put",
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GiftStatusIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GiftStatusOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/groups/{group_id}/gift-progress": {
+      "get": {
+        "tags": ["draws"],
+        "summary": "Gift Progress",
+        "description": "Para a organização: quantos já compraram, sem dizer quem.",
+        "operationId": "gift_progress_api_v1_groups__group_id__gift_progress_get",
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GiftProgressOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2384,6 +2477,44 @@
         "type": "object",
         "required": ["email"],
         "title": "ForgotPasswordIn"
+      },
+      "GiftProgressOut": {
+        "properties": {
+          "purchased": {
+            "type": "integer",
+            "title": "Purchased"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": ["purchased", "total"],
+        "title": "GiftProgressOut",
+        "description": "Só números agregados: nunca diz quem comprou para quem."
+      },
+      "GiftStatusIn": {
+        "properties": {
+          "purchased": {
+            "type": "boolean",
+            "title": "Purchased"
+          }
+        },
+        "type": "object",
+        "required": ["purchased"],
+        "title": "GiftStatusIn"
+      },
+      "GiftStatusOut": {
+        "properties": {
+          "purchased": {
+            "type": "boolean",
+            "title": "Purchased"
+          }
+        },
+        "type": "object",
+        "required": ["purchased"],
+        "title": "GiftStatusOut"
       },
       "GroupCreate": {
         "properties": {
@@ -3281,6 +3412,10 @@
           },
           "preferences": {
             "$ref": "#/components/schemas/PreferencesOut"
+          },
+          "gift_purchased": {
+            "type": "boolean",
+            "title": "Gift Purchased"
           }
         },
         "type": "object",
@@ -3291,7 +3426,8 @@
           "shirt_size",
           "shoe_size",
           "wishlist",
-          "preferences"
+          "preferences",
+          "gift_purchased"
         ],
         "title": "MyMatchOut"
       },

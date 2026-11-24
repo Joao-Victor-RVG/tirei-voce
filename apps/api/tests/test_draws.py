@@ -270,6 +270,7 @@ async def test_my_match_only_shows_own_receiver(user_client: UserClientFactory) 
             "shoe_size",
             "wishlist",
             "preferences",
+            "gift_purchased",
         }
         seen.add(match["participant_id"])
     assert seen == set(ids.values())
@@ -292,3 +293,48 @@ def _contains_pair(data: Any, giver: str, receiver: str) -> bool:
     if isinstance(data, list):
         return any(_contains_pair(v, giver, receiver) for v in data)
     return False
+
+
+# --- Presente comprado ---
+
+
+async def test_gift_purchased_and_aggregate_progress(user_client: UserClientFactory) -> None:
+    base, _ids, clients = await _drawn_group(user_client)
+    ana = clients["Ana"]
+    assert (await ana.get(f"{base}/gift-progress")).json() == {"purchased": 0, "total": 4}
+
+    bia = clients["Bia"]
+    assert (await bia.get(f"{base}/my-match")).json()["gift_purchased"] is False
+    marked = await bia.put(f"{base}/my-match/gift", json={"purchased": True})
+    assert marked.json() == {"purchased": True}
+    assert (await bia.get(f"{base}/my-match")).json()["gift_purchased"] is True
+    await clients["Caio"].put(f"{base}/my-match/gift", json={"purchased": True})
+
+    progress = (await ana.get(f"{base}/gift-progress")).json()
+    assert progress == {"purchased": 2, "total": 4}  # só números, sem nomes
+
+    await bia.put(f"{base}/my-match/gift", json={"purchased": False})
+    assert (await ana.get(f"{base}/gift-progress")).json()["purchased"] == 1
+
+
+async def test_gift_progress_is_organizer_only_and_after_draw(
+    user_client: UserClientFactory,
+) -> None:
+    base, _ids, clients = await _drawn_group(user_client)
+    assert (await clients["Bia"].get(f"{base}/gift-progress")).status_code == 403
+
+    eva = await user_client("Eva")
+    fresh = await create_group(eva, open_=True)
+    early = await eva.get(f"/api/v1/groups/{fresh['id']}/gift-progress")
+    assert early.status_code == 409
+    early_gift = await eva.put(
+        f"/api/v1/groups/{fresh['id']}/my-match/gift", json={"purchased": True}
+    )
+    assert early_gift.status_code == 409
+
+
+async def test_gift_status_read_only_after_finish(user_client: UserClientFactory) -> None:
+    base, _ids, clients = await _drawn_group(user_client)
+    await clients["Ana"].post(f"{base}/finish")
+    response = await clients["Bia"].put(f"{base}/my-match/gift", json={"purchased": True})
+    assert response.status_code == 409

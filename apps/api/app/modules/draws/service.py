@@ -15,10 +15,12 @@ from app.modules.draws.schemas import (
     ConstrainedParticipant,
     DrawOut,
     DrawValidationOut,
+    GiftProgressOut,
+    GiftStatusOut,
     MyMatchOut,
 )
 from app.modules.groups.models import Group, GroupStatus
-from app.modules.groups.service import GroupAccess, ensure_transition, transition
+from app.modules.groups.service import GroupAccess, Membership, ensure_transition, transition
 from app.modules.participants.models import Participant
 from app.modules.participants.repository import ParticipantRepository
 from app.modules.rules.repository import RulesRepository
@@ -136,17 +138,7 @@ class DrawService:
         return result
 
     async def my_match(self, group_id: uuid.UUID, user: User) -> MyMatchOut:
-        membership = await self.access.member(group_id, user)
-        if membership.group.status not in (GroupStatus.DRAWN, GroupStatus.FINISHED):
-            raise ConflictError("O sorteio ainda não foi feito.", code="draw_not_done")
-        draw = await self.draws.latest(group_id)
-        mine = (
-            await self.draws.assignment_for_giver(draw.id, membership.participant.id)
-            if draw
-            else None
-        )
-        if mine is None:
-            raise ConflictError("Você não participou deste sorteio.", code="not_in_draw")
+        _membership, mine = await self._my_assignment(group_id, user)
         receiver_id = crypto.decrypt_receiver(mine.receiver_encrypted)
         receiver = await self.participants.get_by_id(receiver_id)
         if receiver is None:  # pragma: no cover - FK garante a existência
@@ -165,7 +157,47 @@ class DrawService:
             preferences=PreferencesOut(
                 dislikes=prefs.dislikes if prefs else None, notes=prefs.notes if prefs else None
             ),
+            gift_purchased=mine.gift_purchased_at is not None,
         )
+
+    async def set_gift_purchased(
+        self, group_id: uuid.UUID, user: User, purchased: bool
+    ) -> GiftStatusOut:
+        membership, mine = await self._my_assignment(group_id, user)
+        if membership.group.status is GroupStatus.FINISHED:
+            raise ConflictError(
+                "O grupo foi encerrado e está somente leitura.", code="group_finished"
+            )
+        if purchased and mine.gift_purchased_at is None:
+            mine.gift_purchased_at = datetime.now(UTC)
+        elif not purchased:
+            mine.gift_purchased_at = None
+        await self.session.commit()
+        return GiftStatusOut(purchased=mine.gift_purchased_at is not None)
+
+    async def gift_progress(self, group_id: uuid.UUID, user: User) -> GiftProgressOut:
+        membership = await self.access.organizer(group_id, user)
+        if membership.group.status not in (GroupStatus.DRAWN, GroupStatus.FINISHED):
+            raise ConflictError("O sorteio ainda não foi feito.", code="draw_not_done")
+        draw = await self.draws.latest(group_id)
+        purchased, total = await self.draws.gift_progress(draw.id) if draw else (0, 0)
+        return GiftProgressOut(purchased=purchased, total=total)
+
+    async def _my_assignment(
+        self, group_id: uuid.UUID, user: User
+    ) -> tuple[Membership, DrawAssignment]:
+        membership = await self.access.member(group_id, user)
+        if membership.group.status not in (GroupStatus.DRAWN, GroupStatus.FINISHED):
+            raise ConflictError("O sorteio ainda não foi feito.", code="draw_not_done")
+        draw = await self.draws.latest(group_id)
+        mine = (
+            await self.draws.assignment_for_giver(draw.id, membership.participant.id)
+            if draw
+            else None
+        )
+        if mine is None:
+            raise ConflictError("Você não participou deste sorteio.", code="not_in_draw")
+        return membership, mine
 
     async def _rules(
         self, group: Group

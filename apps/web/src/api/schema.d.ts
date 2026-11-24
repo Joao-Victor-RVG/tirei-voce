@@ -684,6 +684,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/groups/{group_id}/my-match/gift": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set Gift Status */
+        put: operations["set_gift_status_api_v1_groups__group_id__my_match_gift_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/groups/{group_id}/gift-progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Gift Progress
+         * @description Para a organização: quantos já compraram, sem dizer quem.
+         */
+        get: operations["gift_progress_api_v1_groups__group_id__gift_progress_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -829,6 +866,26 @@ export interface components {
              * Format: email
              */
             email: string;
+        };
+        /**
+         * GiftProgressOut
+         * @description Só números agregados: nunca diz quem comprou para quem.
+         */
+        GiftProgressOut: {
+            /** Purchased */
+            purchased: number;
+            /** Total */
+            total: number;
+        };
+        /** GiftStatusIn */
+        GiftStatusIn: {
+            /** Purchased */
+            purchased: boolean;
+        };
+        /** GiftStatusOut */
+        GiftStatusOut: {
+            /** Purchased */
+            purchased: boolean;
         };
         /** GroupCreate */
         GroupCreate: {
@@ -1080,6 +1137,8 @@ export interface components {
             /** Wishlist */
             wishlist: components["schemas"]["WishlistItemOut"][];
             preferences: components["schemas"]["PreferencesOut"];
+            /** Gift Purchased */
+            gift_purchased: boolean;
         };
         /** Page[GroupSummaryOut] */
         Page_GroupSummaryOut_: {
@@ -2758,6 +2817,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MyMatchOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_gift_status_api_v1_groups__group_id__my_match_gift_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GiftStatusIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GiftStatusOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    gift_progress_api_v1_groups__group_id__gift_progress_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GiftProgressOut"];
                 };
             };
             /** @description Validation Error */

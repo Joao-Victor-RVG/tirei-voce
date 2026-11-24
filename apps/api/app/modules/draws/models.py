@@ -31,6 +31,8 @@ class DrawAssignment(UUIDPrimaryKey, Timestamps, Base):
     )
     receiver_encrypted: Mapped[bytes] = mapped_column(LargeBinary)
     receiver_lookup_hash: Mapped[str] = mapped_column(String(64))
+    # Marcado por quem dá o presente; a organização só vê o total agregado.
+    gift_purchased_at: Mapped[datetime | None]
 
     __table_args__ = (
         UniqueConstraint("draw_id", "giver_participant_id"),
