@@ -24,6 +24,11 @@ class Settings(BaseSettings):
     cookie_secure: bool = True
     cookie_domain: str | None = None
 
+    google_client_id: str | None = None
+    google_client_secret: str | None = None
+    # Passa pelo proxy do front (mesma origem), para os cookies de sessão funcionarem.
+    google_redirect_uri: str = "http://localhost:5173/api/v1/auth/google/callback"
+
     email_provider: Literal["console", "resend"] = "console"
     email_from: str = "Tirei Você! <nao-responda@tireivoce.com.br>"
     resend_api_key: str | None = None
@@ -43,6 +48,10 @@ class Settings(BaseSettings):
             if not self.cookie_secure:
                 raise ValueError("COOKIE_SECURE precisa ser true em produção")
         return self
+
+    @property
+    def google_enabled(self) -> bool:
+        return bool(self.google_client_id and self.google_client_secret)
 
     @property
     def is_production(self) -> bool:

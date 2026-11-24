@@ -1,6 +1,12 @@
-from fastapi import APIRouter, Request, Response, status
+from typing import Annotated
+from urllib.parse import urlencode
+
+from fastapi import APIRouter, Depends, Query, Request, Response, status
+from fastapi.responses import RedirectResponse
 
 from app.core import rate_limit
+from app.core.config import get_settings
+from app.core.errors import AppError
 from app.modules.auth.cookies import (
     CSRF_COOKIE,
     REFRESH_COOKIE,
@@ -9,7 +15,16 @@ from app.modules.auth.cookies import (
     set_csrf_cookie,
 )
 from app.modules.auth.dependencies import AuthServiceDep, Client, CurrentUser
+from app.modules.auth.google import (
+    STATE_TTL_SECONDS,
+    GoogleAuthError,
+    GoogleOAuthClient,
+    OAuthStateStore,
+    new_pending_login,
+    safe_next_path,
+)
 from app.modules.auth.schemas import (
+    AuthConfigOut,
     CsrfOut,
     ForgotPasswordIn,
     LoginIn,
@@ -22,6 +37,19 @@ from app.modules.auth.service import InvalidRefreshTokenError
 from app.modules.users.schemas import MeOut
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+OAUTH_COOKIE = "tv_oauth"
+OAUTH_COOKIE_PATH = "/api/v1/auth/google"
+
+
+def get_google_client() -> GoogleOAuthClient | None:
+    settings = get_settings()
+    return GoogleOAuthClient(settings) if settings.google_enabled else None
+
+
+@router.get("/config", response_model=AuthConfigOut)
+async def auth_config() -> AuthConfigOut:
+    return AuthConfigOut(google_enabled=get_settings().google_enabled)
 
 
 @router.get("/csrf", response_model=CsrfOut)
@@ -99,3 +127,69 @@ async def reset_password(
     await rate_limit.hit("reset:ip", client.ip or "-", limit=20, window_seconds=900)
     await service.reset_password(data.token, data.password)
     clear_auth_cookies(response)
+
+
+def _frontend_redirect(path: str) -> RedirectResponse:
+    return RedirectResponse(f"{get_settings().frontend_url}{path}", status_code=302)
+
+
+def _login_error_redirect(code: str) -> RedirectResponse:
+    return _frontend_redirect(f"/login?{urlencode({'error': code})}")
+
+
+@router.get("/google/start", response_class=RedirectResponse, status_code=302)
+async def google_start(
+    client: Client, next: Annotated[str | None, Query(max_length=512)] = None
+) -> RedirectResponse:
+    google = get_google_client()
+    if google is None:
+        return _login_error_redirect("google_disabled")
+    await rate_limit.hit("google:ip", client.ip or "-", limit=30, window_seconds=300)
+    state, pending = new_pending_login(safe_next_path(next))
+    await OAuthStateStore().save(state, pending)
+    response = RedirectResponse(
+        google.authorization_url(state, pending.code_verifier, pending.nonce), status_code=302
+    )
+    # Amarra o state a este navegador (evita login CSRF).
+    settings = get_settings()
+    response.set_cookie(
+        OAUTH_COOKIE,
+        state,
+        max_age=STATE_TTL_SECONDS,
+        path=OAUTH_COOKIE_PATH,
+        httponly=True,
+        secure=settings.cookie_secure,
+        samesite="lax",
+        domain=settings.cookie_domain,
+    )
+    return response
+
+
+@router.get("/google/callback", response_class=RedirectResponse, status_code=302)
+async def google_callback(
+    request: Request,
+    service: AuthServiceDep,
+    client: Client,
+    google: Annotated[GoogleOAuthClient | None, Depends(get_google_client)],
+    code: Annotated[str | None, Query(max_length=2048)] = None,
+    state: Annotated[str | None, Query(max_length=256)] = None,
+) -> RedirectResponse:
+    cookie_state = request.cookies.get(OAUTH_COOKIE)
+    pending = await OAuthStateStore().pop(state) if state else None
+    try:
+        if google is None:
+            raise GoogleAuthError(code="google_disabled")
+        if not code or not state or not cookie_state or cookie_state != state or not pending:
+            raise GoogleAuthError()
+        id_token = await google.exchange_code(code, pending.code_verifier)
+        identity = await google.verify_id_token(id_token, pending.nonce)
+        _, tokens = await service.login_with_google(identity, client)
+    except AppError as exc:
+        response = _login_error_redirect(exc.code)
+    else:
+        response = _frontend_redirect(pending.next_path)
+        set_auth_cookies(response, tokens)
+    response.delete_cookie(
+        OAUTH_COOKIE, path=OAUTH_COOKIE_PATH, domain=get_settings().cookie_domain
+    )
+    return response

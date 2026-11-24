@@ -15,6 +15,7 @@ from app.core.security import (
     password_needs_rehash,
     verify_password,
 )
+from app.modules.auth.google import GoogleIdentity
 from app.modules.auth.models import EmailToken, EmailTokenPurpose, RefreshToken
 from app.modules.auth.passwords import validate_password
 from app.modules.auth.repository import EmailTokenRepository, RefreshTokenRepository
@@ -94,11 +95,44 @@ class AuthService:
         await self.session.commit()
         return user, tokens
 
-    async def login_user(self, user: User, client: ClientInfo) -> TokenPair:
-        """Cria uma sessão para um usuário já autenticado por outro meio (ex.: Google)."""
+    async def login_with_google(
+        self, identity: GoogleIdentity, client: ClientInfo
+    ) -> tuple[User, TokenPair]:
+        now = datetime.now(UTC)
+        user = await self.users.get_by_google_sub(identity.sub)
+        if user is None:
+            user = await self.users.get_by_email(identity.email)
+            if user is not None:
+                if user.google_sub is not None:  # e-mail já vinculado a outra conta Google
+                    raise UnauthorizedError(
+                        "Este e-mail já está vinculado a outra conta Google.",
+                        code="google_account_conflict",
+                    )
+                if not user.is_email_verified:
+                    # Conta com senha nunca verificada: quem criou pode não ser o dono do e-mail.
+                    # O Google provou a posse, então removemos a senha e as sessões existentes.
+                    user.password_hash = None
+                    await self.refresh_tokens.revoke_all_for_user(user.id, now)
+                user.google_sub = identity.sub
+                user.email_verified_at = user.email_verified_at or now
+                user.avatar_url = user.avatar_url or identity.picture
+                logger.info("google_account_linked", extra={"user_id": str(user.id)})
+            else:
+                user = await self.users.add(
+                    User(
+                        name=identity.name,
+                        email=identity.email,
+                        google_sub=identity.sub,
+                        email_verified_at=now,
+                        avatar_url=identity.picture,
+                    )
+                )
+                logger.info("user_registered", extra={"user_id": str(user.id), "via": "google"})
+        if not user.is_active:
+            raise UnauthorizedError("Esta conta está desativada.", code="account_disabled")
         tokens = await self._issue_tokens(user, client)
         await self.session.commit()
-        return tokens
+        return user, tokens
 
     async def refresh(self, raw_token: str, client: ClientInfo) -> tuple[User, TokenPair]:
         now = datetime.now(UTC)

@@ -50,3 +50,7 @@ class ResetPasswordIn(BaseModel):
 
 class MessageOut(BaseModel):
     message: str
+
+
+class AuthConfigOut(BaseModel):
+    google_enabled: bool
