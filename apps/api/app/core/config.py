@@ -38,6 +38,11 @@ class Settings(BaseSettings):
     verify_email_ttl_hours: int = 24
     reset_password_ttl_minutes: int = 60
 
+    # Web Push (VAPID). Gere com: make keys. Sem elas, o push fica desligado.
+    vapid_public_key: str | None = None
+    vapid_private_key: str | None = None
+    vapid_subject: str = "mailto:contato@tireivoce.com.br"
+
     sentry_dsn: str | None = None
     sentry_traces_sample_rate: float = 0.0
 
@@ -64,6 +69,10 @@ class Settings(BaseSettings):
             if not self.cookie_secure:
                 raise ValueError("COOKIE_SECURE precisa ser true em produção")
         return self
+
+    @property
+    def push_enabled(self) -> bool:
+        return bool(self.vapid_public_key and self.vapid_private_key)
 
     @property
     def google_enabled(self) -> bool:

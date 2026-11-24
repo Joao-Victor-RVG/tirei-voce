@@ -2437,6 +2437,118 @@
           }
         }
       }
+    },
+    "/api/v1/push/config": {
+      "get": {
+        "tags": ["notifications"],
+        "summary": "Push Config",
+        "operationId": "push_config_api_v1_push_config_get",
+        "parameters": [
+          {
+            "name": "endpoint",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 2048
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Endpoint"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushConfigOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/push/subscriptions": {
+      "post": {
+        "tags": ["notifications"],
+        "summary": "Subscribe",
+        "operationId": "subscribe_api_v1_push_subscriptions_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PushSubscriptionIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["notifications"],
+        "summary": "Unsubscribe",
+        "operationId": "unsubscribe_api_v1_push_subscriptions_delete",
+        "parameters": [
+          {
+            "name": "endpoint",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 2048,
+              "title": "Endpoint"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3907,6 +4019,72 @@
         "type": "object",
         "required": ["dislikes", "notes"],
         "title": "PreferencesOut"
+      },
+      "PushConfigOut": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "public_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Public Key"
+          },
+          "subscribed": {
+            "type": "boolean",
+            "title": "Subscribed",
+            "description": "Se este navegador (endpoint informado) já está inscrito"
+          }
+        },
+        "type": "object",
+        "required": ["enabled", "public_key", "subscribed"],
+        "title": "PushConfigOut"
+      },
+      "PushKeys": {
+        "properties": {
+          "p256dh": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 10,
+            "pattern": "^[A-Za-z0-9_=-]+$",
+            "title": "P256Dh"
+          },
+          "auth": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 10,
+            "pattern": "^[A-Za-z0-9_=-]+$",
+            "title": "Auth"
+          }
+        },
+        "type": "object",
+        "required": ["p256dh", "auth"],
+        "title": "PushKeys"
+      },
+      "PushSubscriptionIn": {
+        "properties": {
+          "endpoint": {
+            "type": "string",
+            "maxLength": 2048,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Endpoint"
+          },
+          "keys": {
+            "$ref": "#/components/schemas/PushKeys"
+          }
+        },
+        "type": "object",
+        "required": ["endpoint", "keys"],
+        "title": "PushSubscriptionIn",
+        "description": "Formato de PushSubscription.toJSON() do navegador."
       },
       "RegisterIn": {
         "properties": {

@@ -21,6 +21,7 @@ from app.modules.draws.schemas import (
 )
 from app.modules.groups.models import Group, GroupStatus
 from app.modules.groups.service import GroupAccess, Membership, ensure_transition, transition
+from app.modules.notifications import events
 from app.modules.participants.models import Participant
 from app.modules.participants.repository import ParticipantRepository
 from app.modules.rules.repository import RulesRepository
@@ -131,6 +132,7 @@ class DrawService:
         )
         if idem_key:
             await get_redis().set(idem_key, result.model_dump_json(), ex=IDEMPOTENCY_TTL_SECONDS)
+        await events.draw_done(group.id)
         logger.info(
             "draw_executed",
             extra={"group_id": str(group.id), "version": draw.version, "size": len(people)},

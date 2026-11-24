@@ -219,3 +219,26 @@ test("401 renova a sessão uma vez e repete a requisição", async () => {
   expect(await screen.findByRole("heading", { name: "Meu perfil" })).toBeInTheDocument();
   expect(calls.filter((c) => c.path === "/auth/refresh")).toHaveLength(1);
 });
+
+test("perfil mostra opção de notificações quando o push está habilitado", async () => {
+  mockApi((url) => {
+    if (url.pathname.endsWith("/me")) return { body: { ...ME, email_verified: true } };
+    if (url.pathname.endsWith("/push/config"))
+      return { body: { enabled: true, public_key: "BPUB", subscribed: false } };
+  });
+  renderRoute("/profile");
+  expect(await screen.findByText("Notificações neste aparelho")).toBeInTheDocument();
+  // jsdom não tem PushManager: mostra o aviso em vez do botão.
+  expect(screen.getByText("Este navegador não suporta notificações.")).toBeInTheDocument();
+});
+
+test("perfil esconde notificações quando o push está desligado no servidor", async () => {
+  mockApi((url) => {
+    if (url.pathname.endsWith("/me")) return { body: { ...ME, email_verified: true } };
+    if (url.pathname.endsWith("/push/config"))
+      return { body: { enabled: false, public_key: null, subscribed: false } };
+  });
+  renderRoute("/profile");
+  expect(await screen.findByRole("heading", { name: "Meu perfil" })).toBeInTheDocument();
+  expect(screen.queryByText("Notificações neste aparelho")).not.toBeInTheDocument();
+});

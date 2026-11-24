@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { Alert, Avatar, Button, Card, Field, Input, PageLoader } from "@/components/ui";
 import { useMe, useUpdateMe } from "@/features/auth/api";
+import { PushCard } from "@/features/auth/PushCard";
 import { VerifyEmailBanner } from "@/features/auth/VerifyEmailBanner";
 import { applyApiError } from "@/lib/forms";
 
@@ -86,6 +87,7 @@ function ProfileForm({ me }: { me: NonNullable<ReturnType<typeof useMe>["data"]>
           </Button>
         </form>
       </Card>
+      <PushCard />
     </div>
   );
 }

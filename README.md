@@ -46,7 +46,7 @@ docker compose -f infra/docker-compose.yml logs -f worker   # procure por "verif
 | `make migration m="descrição"` | Gera uma migration nova (autogenerate) |
 | `make seed` | Carrega os temas iniciais (idempotente) |
 | `make api-types` | Regenera `openapi.json` e os tipos TypeScript do front |
-| `make keys` | Gera `JWT_SECRET`, `DRAW_ENCRYPTION_KEY` e `DRAW_HMAC_KEY` |
+| `make keys` | Gera `JWT_SECRET`, `DRAW_ENCRYPTION_KEY`, `DRAW_HMAC_KEY` e as chaves VAPID |
 | `make prod-up` | Sobe as imagens de produção em http://localhost:8080 |
 
 Para rodar testes e lint fora do Docker: instale [uv](https://docs.astral.sh/uv/) e
@@ -71,6 +71,7 @@ Todas documentadas em [`.env.example`](.env.example). As principais:
 | `EMAIL_PROVIDER` | — | `console` (dev) ou `resend` |
 | `RESEND_API_KEY`, `EMAIL_FROM` | com Resend | Envio de e-mail transacional |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` | não | Login com Google (sem elas o botão some) |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | não | Notificações push (sem elas o push fica desligado) |
 | `SENTRY_DSN` | não | Sentry desligado por padrão |
 
 Em produção a API **se recusa a subir** com os segredos padrão de dev, `JWT_SECRET` curto ou

@@ -81,5 +81,9 @@ envVarGroups:
         sync: false
       - key: GOOGLE_CLIENT_SECRET
         sync: false
+      - key: VAPID_PUBLIC_KEY
+        sync: false # make keys
+      - key: VAPID_PRIVATE_KEY
+        sync: false # make keys
       - key: SENTRY_DSN
         sync: false

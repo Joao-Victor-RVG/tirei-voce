@@ -6,6 +6,7 @@ from app.core.logging import configure_logging
 from app.core.queue import redis_settings
 from app.core.sentry import init_sentry
 from app.modules.notifications.email import EmailMessage, build_email_sender
+from app.workers.notifications import push_chat_message, push_draw_done
 
 logger = logging.getLogger(__name__)
 
@@ -24,8 +25,9 @@ async def send_email(ctx: dict[str, Any], payload: dict[str, Any]) -> None:
 
 
 class WorkerSettings:
-    functions: ClassVar[list[Any]] = [send_email]
+    functions: ClassVar[list[Any]] = [send_email, push_draw_done, push_chat_message]
     on_startup = startup
     redis_settings = redis_settings()
     max_tries = 5
-    job_timeout = 30
+    job_timeout = 60
+    keep_result = 0  # não guarda resultados (nem argumentos) depois de executar

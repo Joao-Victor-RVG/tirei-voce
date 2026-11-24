@@ -19,11 +19,8 @@ migrate: ## Aplica as migrations (com o compose rodando)
 seed: ## Carrega os dados iniciais (temas); idempotente
 	$(COMPOSE) exec api python -m app.seed
 
-keys: ## Gera segredos novos para JWT_SECRET, DRAW_ENCRYPTION_KEY e DRAW_HMAC_KEY
-	@cd apps/api && uv run python -c "import secrets; from cryptography.fernet import Fernet; \
-	print('JWT_SECRET=' + secrets.token_urlsafe(48)); \
-	print('DRAW_ENCRYPTION_KEY=' + Fernet.generate_key().decode()); \
-	print('DRAW_HMAC_KEY=' + secrets.token_urlsafe(48))"
+keys: ## Gera segredos novos (JWT, chaves do sorteio e VAPID do push)
+	@cd apps/api && uv run python -m app.keys
 
 migration: ## Gera uma migration: make migration m="descricao"
 	$(COMPOSE) exec api alembic revision --autogenerate -m "$(m)"

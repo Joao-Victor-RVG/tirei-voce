@@ -15,6 +15,7 @@ dependencies = [
     "pydantic>=2.9",
     "pydantic-settings>=2.6",
     "pyjwt[crypto]>=2.10",
+    "pywebpush>=2.0",
     "redis>=5.2",
     "sentry-sdk[fastapi]>=2.19",
     "sqlalchemy[asyncio]>=2.0.36",
@@ -54,7 +55,7 @@ plugins = ["pydantic.mypy"]
 exclude = ["migrations/"]
 
 [[tool.mypy.overrides]]
-module = ["arq.*", "asyncpg.*"]
+module = ["arq.*", "asyncpg.*", "pywebpush.*", "py_vapid.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

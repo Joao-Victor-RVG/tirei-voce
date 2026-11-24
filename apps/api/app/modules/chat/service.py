@@ -14,6 +14,7 @@ from app.modules.draws.models import DrawAssignment
 from app.modules.draws.repository import DrawRepository
 from app.modules.groups.models import GroupStatus
 from app.modules.groups.service import GroupAccess, Membership
+from app.modules.notifications import events
 from app.modules.participants.repository import ParticipantRepository
 from app.modules.users.models import User
 
@@ -92,6 +93,7 @@ class ChatService:
             ChatMessage(assignment_id=chat.assignment.id, sender_role=chat.my_role, body=body)
         )
         await self.session.commit()
+        await events.chat_message(chat.assignment.id, chat.other_role.value)
         return self._out(message, chat)
 
     async def mark_read(self, group_id: uuid.UUID, user: User, thread: Thread) -> None:
