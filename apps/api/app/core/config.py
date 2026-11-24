@@ -1,0 +1,30 @@
+from functools import lru_cache
+from typing import Literal
+
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    environment: Literal["development", "test", "production"] = "development"
+    log_level: str = "INFO"
+    frontend_url: str = "http://localhost:5173"
+
+    database_url: str = "postgresql+asyncpg://tirei:tirei@localhost:5432/tirei_voce"
+    db_pool_size: int = Field(default=10, ge=1)
+    db_max_overflow: int = Field(default=10, ge=0)
+    redis_url: str = "redis://localhost:6379/0"
+
+    sentry_dsn: str | None = None
+    sentry_traces_sample_rate: float = 0.0
+
+    @property
+    def is_production(self) -> bool:
+        return self.environment == "production"
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
