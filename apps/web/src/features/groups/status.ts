@@ -22,3 +22,9 @@ export const isDrawn = isFrozen;
 export function inviteUrl(code: string): string {
   return `${window.location.origin}/i/${code}`;
 }
+
+type WithRole = { my_role: "owner" | "co_owner" | "member" };
+
+/** Dono ou coorganizador. */
+export const isOrganizer = (group: WithRole) => group.my_role !== "member";
+export const isOwner = (group: WithRole) => group.my_role === "owner";

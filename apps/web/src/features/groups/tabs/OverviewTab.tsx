@@ -14,9 +14,10 @@ import { Countdown } from "../Countdown";
 import { EventFields } from "../EventFields";
 import { eventPayload, eventSchema, eventValuesFromGroup, type EventValues } from "../eventForm";
 import { ShareInvite } from "../ShareInvite";
+import { isOrganizer } from "../status";
 
 export function OverviewTab({ group }: { group: Group }) {
-  const organizer = group.my_role === "owner";
+  const organizer = isOrganizer(group);
   const [editing, setEditing] = useState(false);
   const range = formatValueRange(group.min_value_cents, group.max_value_cents);
 
@@ -110,7 +111,7 @@ function Detail({ icon, label, value }: { icon: string; label: string; value: Re
 }
 
 function InviteCard({ group }: { group: Group }) {
-  const organizer = group.my_role === "owner";
+  const organizer = isOrganizer(group);
   const regenerate = useRegenerateInvite(group.id);
   const [confirm, setConfirm] = useState(false);
 

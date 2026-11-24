@@ -371,3 +371,45 @@ test("convite fechado mostra o motivo", async () => {
   ).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: /Participar/ })).not.toBeInTheDocument();
 });
+
+test("dono promove coorganizador e coorganizador vê a aba Regras", async () => {
+  const people = [
+    {
+      id: "p1",
+      user: { id: "u1", name: "Ana", avatar_url: null },
+      role: "owner",
+      joined_at: "2026-11-01T00:00:00Z",
+      is_me: true,
+    },
+    {
+      id: "p2",
+      user: { id: "u2", name: "Bia", avatar_url: null },
+      role: "member",
+      joined_at: "2026-11-01T00:00:00Z",
+      is_me: false,
+    },
+  ];
+  const calls = mockApi((url, init) => {
+    const path = url.pathname.replace("/api/v1", "");
+    if (path === "/me") return json(ME);
+    if (path === "/groups/g1") return json(group());
+    if (path === "/groups/g1/participants") return json(people);
+    if (path === "/groups/g1/participants/p2/co-organizer" && init.method === "PUT") {
+      people[1]!.role = "co_owner";
+      return json(people[1]);
+    }
+  });
+  renderRoute("/groups/g1?tab=participants");
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: "Tornar coorganizador" }));
+  expect(await screen.findByText("Coorganização")).toBeInTheDocument();
+  expect(calls.some((c) => c.method === "PUT" && c.path.endsWith("/co-organizer"))).toBe(true);
+  vi.unstubAllGlobals();
+
+  mockApi((url) => {
+    if (url.pathname.endsWith("/me")) return json(ME);
+    if (url.pathname.endsWith("/groups/g1")) return json(group({ my_role: "co_owner" }));
+  });
+  renderRoute("/groups/g1");
+  expect((await screen.findAllByRole("tab", { name: "Regras" })).length).toBeGreaterThan(0);
+});

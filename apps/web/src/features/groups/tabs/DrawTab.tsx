@@ -8,11 +8,11 @@ import { Alert, Button, Card, EmptyState } from "@/components/ui";
 import { useDrawValidation, useExecuteDraw } from "../api";
 import { DrawValidationCard } from "../DrawValidationCard";
 import { RevealCard } from "../RevealCard";
-import { isDrawn } from "../status";
+import { isDrawn, isOrganizer } from "../status";
 
 export function DrawTab({ group }: { group: Group }) {
   if (isDrawn(group.status)) return <RevealCard group={group} />;
-  if (group.my_role === "owner") return <OrganizerDraw group={group} />;
+  if (isOrganizer(group)) return <OrganizerDraw group={group} />;
   return (
     <Card>
       <EmptyState emoji="⏳" title="Aguardando o sorteio">

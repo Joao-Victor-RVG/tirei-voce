@@ -4,6 +4,7 @@ import { ApiError, errorMessage } from "@/api/client";
 import type { Group } from "@/api/types";
 import { EmptyState, ErrorState, PageLoader } from "@/components/ui";
 import { useGroup } from "@/features/groups/api";
+import { isOrganizer } from "@/features/groups/status";
 import { StatusBadge } from "@/features/groups/StatusBadge";
 import { DrawTab } from "@/features/groups/tabs/DrawTab";
 import { OverviewTab } from "@/features/groups/tabs/OverviewTab";
@@ -46,7 +47,7 @@ export function GroupPage() {
 
 function GroupView({ group }: { group: Group }) {
   const [params, setParams] = useSearchParams();
-  const organizer = group.my_role === "owner";
+  const organizer = isOrganizer(group);
   const tabs = TABS.filter((tab) => !tab.organizerOnly || organizer);
   const defaultTab: TabId = group.status === "DRAWN" ? "draw" : "overview";
   const requested = params.get("tab") as TabId | null;

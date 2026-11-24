@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 class ParticipantRole(enum.StrEnum):
     OWNER = "owner"
-    CO_OWNER = "co_owner"  # reservado para a Fase 2 (coorganizadores)
+    CO_OWNER = "co_owner"  # coorganizador: mesmos poderes, menos gerir coorganizadores
     MEMBER = "member"
 
 
@@ -40,5 +40,9 @@ class Participant(UUIDPrimaryKey, Timestamps, Base):
         return self.left_at is None
 
     @property
-    def is_organizer(self) -> bool:
+    def is_owner(self) -> bool:
         return self.role is ParticipantRole.OWNER
+
+    @property
+    def is_organizer(self) -> bool:
+        return self.role in (ParticipantRole.OWNER, ParticipantRole.CO_OWNER)

@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_session
 from app.modules.auth.dependencies import CurrentUser
+from app.modules.participants.models import ParticipantRole
 from app.modules.participants.schemas import ParticipantOut
 from app.modules.participants.service import ParticipantService
 
@@ -34,6 +35,20 @@ async def remove_participant(
     group_id: uuid.UUID, participant_id: uuid.UUID, user: CurrentUser, service: Service
 ) -> None:
     await service.remove(group_id, participant_id, user)
+
+
+@router.put("/participants/{participant_id}/co-organizer", response_model=ParticipantOut)
+async def promote_co_organizer(
+    group_id: uuid.UUID, participant_id: uuid.UUID, user: CurrentUser, service: Service
+) -> ParticipantOut:
+    return await service.set_role(group_id, participant_id, user, ParticipantRole.CO_OWNER)
+
+
+@router.delete("/participants/{participant_id}/co-organizer", response_model=ParticipantOut)
+async def demote_co_organizer(
+    group_id: uuid.UUID, participant_id: uuid.UUID, user: CurrentUser, service: Service
+) -> ParticipantOut:
+    return await service.set_role(group_id, participant_id, user, ParticipantRole.MEMBER)
 
 
 @router.post("/leave", status_code=status.HTTP_204_NO_CONTENT)

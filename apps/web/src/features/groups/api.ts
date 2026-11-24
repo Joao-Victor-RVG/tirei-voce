@@ -152,6 +152,17 @@ export function useRemoveParticipant(id: string) {
   });
 }
 
+export function useSetCoOrganizer(id: string) {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: ({ participantId, promote }: { participantId: string; promote: boolean }) =>
+      api<Participant>(`/groups/${id}/participants/${participantId}/co-organizer`, {
+        method: promote ? "PUT" : "DELETE",
+      }),
+    onSuccess: () => invalidate(groupKeys.participants(id)),
+  });
+}
+
 export function useLeaveGroup(id: string) {
   const queryClient = useQueryClient();
   return useMutation({

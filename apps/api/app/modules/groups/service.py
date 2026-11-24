@@ -77,7 +77,11 @@ class Membership:
 
     def require_organizer(self) -> None:
         if not self.participant.is_organizer:
-            raise ForbiddenError("Só o organizador pode fazer isso.", code="organizer_only")
+            raise ForbiddenError("Só a organização pode fazer isso.", code="organizer_only")
+
+    def require_owner(self) -> None:
+        if not self.participant.is_owner:
+            raise ForbiddenError("Só quem criou o grupo pode fazer isso.", code="owner_only")
 
 
 class GroupNotFoundError(NotFoundError):
@@ -108,6 +112,13 @@ class GroupAccess:
     ) -> Membership:
         membership = await self.member(group_id, user, for_update=for_update)
         membership.require_organizer()
+        return membership
+
+    async def owner(
+        self, group_id: uuid.UUID, user: User, *, for_update: bool = False
+    ) -> Membership:
+        membership = await self.member(group_id, user, for_update=for_update)
+        membership.require_owner()
         return membership
 
 
