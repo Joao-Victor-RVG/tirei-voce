@@ -1,3 +1,4 @@
+import re
 from datetime import UTC, datetime
 from typing import Any
 
@@ -36,3 +37,9 @@ async def mark_verified(email: str) -> None:
             .values(email_verified_at=datetime.now(UTC))
         )
         await session.commit()
+
+
+def token_from(message_text: str) -> str:
+    match = re.search(r"token=([A-Za-z0-9_-]+)", message_text)
+    assert match, message_text
+    return match.group(1)

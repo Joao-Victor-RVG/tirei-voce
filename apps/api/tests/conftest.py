@@ -1,6 +1,6 @@
 import asyncio
 import os
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Iterator
 from urllib.parse import urlsplit, urlunsplit
 
 # Precisa vir antes de qualquer import do app: as settings são lidas uma vez.
@@ -23,6 +23,19 @@ from app.core.db import get_engine
 from app.core.redis import get_redis
 from app.main import app
 from app.models import Base
+from app.modules.notifications.email import EmailMessage
+from app.modules.notifications.service import get_email_outbox
+
+
+class MemoryOutbox:
+    def __init__(self) -> None:
+        self.messages: list[EmailMessage] = []
+
+    async def send(self, message: EmailMessage) -> None:
+        self.messages.append(message)
+
+    def last_to(self, to: str) -> EmailMessage:
+        return next(m for m in reversed(self.messages) if m.to == to)
 
 
 async def _ensure_database(url: str) -> None:
@@ -53,6 +66,14 @@ async def _database() -> AsyncIterator[None]:
     yield
     await get_engine().dispose()
     await get_redis().aclose()
+
+
+@pytest.fixture(autouse=True)
+def outbox() -> Iterator[MemoryOutbox]:
+    box = MemoryOutbox()
+    app.dependency_overrides[get_email_outbox] = lambda: box
+    yield box
+    app.dependency_overrides.pop(get_email_outbox, None)
 
 
 @pytest.fixture(autouse=True)

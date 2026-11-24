@@ -24,3 +24,29 @@ class LoginIn(BaseModel):
 
 class CsrfOut(BaseModel):
     csrf_token: str
+
+
+Token = Annotated[str, StringConstraints(min_length=10, max_length=256)]
+
+
+class TokenIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    token: Token
+
+
+class ForgotPasswordIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    email: EmailStr
+
+
+class ResetPasswordIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    token: Token
+    password: Password
+
+
+class MessageOut(BaseModel):
+    message: str

@@ -8,6 +8,7 @@ from app.core.errors import ForbiddenError, UnauthorizedError
 from app.core.security import decode_access_token, tokens_match
 from app.modules.auth.cookies import ACCESS_COOKIE, CSRF_COOKIE, CSRF_HEADER
 from app.modules.auth.service import AuthService, ClientInfo
+from app.modules.notifications.service import EmailOutbox, get_email_outbox
 from app.modules.users.models import User
 from app.modules.users.repository import UserRepository
 
@@ -61,8 +62,11 @@ def get_client_info(request: Request) -> ClientInfo:
     )
 
 
-def get_auth_service(session: Annotated[AsyncSession, Depends(get_session)]) -> AuthService:
-    return AuthService(session)
+def get_auth_service(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    outbox: Annotated[EmailOutbox, Depends(get_email_outbox)],
+) -> AuthService:
+    return AuthService(session, outbox)
 
 
 Client = Annotated[ClientInfo, Depends(get_client_info)]

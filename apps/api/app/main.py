@@ -11,6 +11,7 @@ from app.core.db import get_engine
 from app.core.errors import register_error_handlers
 from app.core.logging import configure_logging
 from app.core.middleware import RequestContextMiddleware
+from app.core.queue import close_queue
 from app.core.redis import get_redis
 from app.core.sentry import init_sentry
 
@@ -18,6 +19,7 @@ from app.core.sentry import init_sentry
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     yield
+    await close_queue()
     await get_redis().aclose()
     await get_engine().dispose()
 

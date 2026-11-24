@@ -24,6 +24,12 @@ class Settings(BaseSettings):
     cookie_secure: bool = True
     cookie_domain: str | None = None
 
+    email_provider: Literal["console", "resend"] = "console"
+    email_from: str = "Tirei Você! <nao-responda@tireivoce.com.br>"
+    resend_api_key: str | None = None
+    verify_email_ttl_hours: int = 24
+    reset_password_ttl_minutes: int = 60
+
     sentry_dsn: str | None = None
     sentry_traces_sample_rate: float = 0.0
 
@@ -32,6 +38,8 @@ class Settings(BaseSettings):
         if self.is_production:
             if self.jwt_secret.startswith("dev-insecure") or len(self.jwt_secret) < 32:
                 raise ValueError("JWT_SECRET precisa ter pelo menos 32 caracteres em produção")
+            if self.email_provider == "resend" and not self.resend_api_key:
+                raise ValueError("RESEND_API_KEY é obrigatório com EMAIL_PROVIDER=resend")
             if not self.cookie_secure:
                 raise ValueError("COOKIE_SECURE precisa ser true em produção")
         return self

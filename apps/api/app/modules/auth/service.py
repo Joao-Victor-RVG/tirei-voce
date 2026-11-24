@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
-from app.core.errors import ConflictError, UnauthorizedError
+from app.core.errors import AppError, ConflictError, UnauthorizedError
 from app.core.security import (
     create_access_token,
     generate_token,
@@ -15,10 +15,12 @@ from app.core.security import (
     password_needs_rehash,
     verify_password,
 )
-from app.modules.auth.models import RefreshToken
+from app.modules.auth.models import EmailToken, EmailTokenPurpose, RefreshToken
 from app.modules.auth.passwords import validate_password
-from app.modules.auth.repository import RefreshTokenRepository
+from app.modules.auth.repository import EmailTokenRepository, RefreshTokenRepository
 from app.modules.auth.schemas import LoginIn, RegisterIn
+from app.modules.notifications import templates
+from app.modules.notifications.service import EmailOutbox
 from app.modules.users.models import User
 from app.modules.users.repository import UserRepository
 
@@ -48,11 +50,18 @@ class InvalidRefreshTokenError(UnauthorizedError):
     message = "Sua sessão expirou. Faça login novamente."
 
 
+class InvalidEmailTokenError(AppError):
+    code = "invalid_token"
+    message = "Este link é inválido ou expirou. Peça um novo."
+
+
 class AuthService:
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, outbox: EmailOutbox) -> None:
         self.session = session
+        self.outbox = outbox
         self.users = UserRepository(session)
         self.refresh_tokens = RefreshTokenRepository(session)
+        self.email_tokens = EmailTokenRepository(session)
 
     async def register(self, data: RegisterIn, client: ClientInfo) -> tuple[User, TokenPair]:
         email = data.email.strip().lower()
@@ -66,7 +75,9 @@ class AuthService:
             await self.session.rollback()
             raise ConflictError("Este e-mail já está cadastrado.", code="email_taken") from exc
         tokens = await self._issue_tokens(user, client)
+        raw_verify = await self._create_email_token(user, EmailTokenPurpose.VERIFY_EMAIL)
         await self.session.commit()
+        await self._send_verification(user, raw_verify)
         logger.info("user_registered", extra={"user_id": str(user.id)})
         return user, tokens
 
@@ -117,6 +128,82 @@ class AuthService:
         if stored is not None and stored.revoked_at is None:
             stored.revoked_at = datetime.now(UTC)
             await self.session.commit()
+
+    # --- Verificação de e-mail ---
+
+    async def resend_verification(self, user: User) -> None:
+        if user.is_email_verified:
+            return
+        raw = await self._create_email_token(user, EmailTokenPurpose.VERIFY_EMAIL)
+        await self.session.commit()
+        await self._send_verification(user, raw)
+
+    async def verify_email(self, raw_token: str) -> User:
+        token = await self._consume_email_token(raw_token, EmailTokenPurpose.VERIFY_EMAIL)
+        user = await self.users.get(token.user_id)
+        if user is None:
+            raise InvalidEmailTokenError()
+        if user.email_verified_at is None:
+            user.email_verified_at = datetime.now(UTC)
+        await self.session.commit()
+        return user
+
+    # --- Reset de senha ---
+
+    async def forgot_password(self, email: str) -> None:
+        """Sempre "funciona" para quem chama: não revela se o e-mail existe."""
+        user = await self.users.get_by_email(email)
+        if user is None or not user.is_active:
+            return
+        raw = await self._create_email_token(user, EmailTokenPurpose.RESET_PASSWORD)
+        await self.session.commit()
+        url = f"{get_settings().frontend_url}/reset-password?token={raw}"
+        await self.outbox.send(templates.reset_password(user.email, user.name, url))
+
+    async def reset_password(self, raw_token: str, new_password: str) -> None:
+        token = await self._consume_email_token(raw_token, EmailTokenPurpose.RESET_PASSWORD)
+        user = await self.users.get(token.user_id)
+        if user is None or not user.is_active:
+            raise InvalidEmailTokenError()
+        validate_password(new_password, email=user.email)
+        now = datetime.now(UTC)
+        user.password_hash = hash_password(new_password)
+        # Quem recebeu o link no e-mail provou que é dono dele.
+        user.email_verified_at = user.email_verified_at or now
+        await self.refresh_tokens.revoke_all_for_user(user.id, now)
+        await self.session.commit()
+        logger.info("password_reset", extra={"user_id": str(user.id)})
+
+    # --- Internos ---
+
+    async def _create_email_token(self, user: User, purpose: EmailTokenPurpose) -> str:
+        settings = get_settings()
+        now = datetime.now(UTC)
+        ttl = (
+            timedelta(hours=settings.verify_email_ttl_hours)
+            if purpose is EmailTokenPurpose.VERIFY_EMAIL
+            else timedelta(minutes=settings.reset_password_ttl_minutes)
+        )
+        await self.email_tokens.invalidate_pending(user.id, purpose, now)
+        raw = generate_token()
+        await self.email_tokens.add(
+            EmailToken(
+                user_id=user.id, purpose=purpose, token_hash=hash_token(raw), expires_at=now + ttl
+            )
+        )
+        return raw
+
+    async def _consume_email_token(self, raw_token: str, purpose: EmailTokenPurpose) -> EmailToken:
+        now = datetime.now(UTC)
+        token = await self.email_tokens.get_by_hash_for_update(hash_token(raw_token), purpose)
+        if token is None or token.used_at is not None or token.expires_at <= now:
+            raise InvalidEmailTokenError()
+        token.used_at = now
+        return token
+
+    async def _send_verification(self, user: User, raw_token: str) -> None:
+        url = f"{get_settings().frontend_url}/verify-email?token={raw_token}"
+        await self.outbox.send(templates.verify_email(user.email, user.name, url))
 
     async def _issue_tokens(self, user: User, client: ClientInfo) -> TokenPair:
         settings = get_settings()
