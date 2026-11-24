@@ -8,6 +8,7 @@ x-api-env: &api-env
     DATABASE_URL: postgresql+asyncpg://tirei:tirei@postgres:5432/tirei_voce
     REDIS_URL: redis://redis:6379/0
     COOKIE_SECURE: "false" # dev roda em http
+    AUTO_VERIFY_EMAILS: ${AUTO_VERIFY_EMAILS:-false} # make share liga (só teste)
 
 services:
   postgres:

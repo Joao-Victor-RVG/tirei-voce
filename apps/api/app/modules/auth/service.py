@@ -70,15 +70,20 @@ class AuthService:
         if await self.users.get_by_email(email):
             raise ConflictError("Este e-mail já está cadastrado.", code="email_taken")
         user = User(name=data.name, email=email, password_hash=hash_password(data.password))
+        if get_settings().auto_verify_emails:  # modo teste: dispensa a confirmação
+            user.email_verified_at = datetime.now(UTC)
         try:
             await self.users.add(user)
         except IntegrityError as exc:  # corrida entre dois cadastros com o mesmo e-mail
             await self.session.rollback()
             raise ConflictError("Este e-mail já está cadastrado.", code="email_taken") from exc
         tokens = await self._issue_tokens(user, client)
-        raw_verify = await self._create_email_token(user, EmailTokenPurpose.VERIFY_EMAIL)
-        await self.session.commit()
-        await self._send_verification(user, raw_verify)
+        if user.is_email_verified:
+            await self.session.commit()
+        else:
+            raw_verify = await self._create_email_token(user, EmailTokenPurpose.VERIFY_EMAIL)
+            await self.session.commit()
+            await self._send_verification(user, raw_verify)
         logger.info("user_registered", extra={"user_id": str(user.id)})
         return user, tokens
 

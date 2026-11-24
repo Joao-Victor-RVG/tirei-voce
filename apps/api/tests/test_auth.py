@@ -234,3 +234,28 @@ def test_verify_password_handles_missing_hash() -> None:
     assert verify_password("qualquer", None) is False
     assert verify_password("certa-123", hash_password("certa-123")) is True
     assert verify_password("errada", "não-é-hash") is False
+
+
+async def test_auto_verify_emails_for_testing(
+    client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch, outbox: object
+) -> None:
+    from app.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "auto_verify_emails", True)
+    data = await register(client)
+    assert data["email_verified"] is True
+    assert outbox.messages == []  # type: ignore[attr-defined]
+
+
+def test_auto_verify_emails_forbidden_in_production() -> None:
+    from app.core.config import Settings
+
+    with pytest.raises(ValueError, match="AUTO_VERIFY_EMAILS"):
+        Settings(
+            environment="production",
+            cookie_secure=True,
+            jwt_secret="x" * 40,
+            draw_encryption_key="YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXphYmNkZWY=",
+            draw_hmac_key="y" * 40,
+            auto_verify_emails=True,
+        )

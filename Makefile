@@ -2,10 +2,18 @@ COMPOSE := docker compose -f infra/docker-compose.yml
 API := cd apps/api &&
 WEB := cd apps/web &&
 
-.PHONY: dev down logs migrate migration seed admin keys render-check api-types prod-up prod-down test test-api test-web lint lint-api lint-web format help
+.PHONY: share dev down logs migrate migration seed admin keys render-check api-types prod-up prod-down test test-api test-web lint lint-api lint-web format help
 
 dev: ## Sobe tudo (postgres, redis, api, worker, web) com hot reload
 	$(COMPOSE) up --build
+
+share: ## TESTE: sobe tudo e gera um link público (Cloudflare Tunnel) para testar com amigos
+	AUTO_VERIFY_EMAILS=true $(COMPOSE) up -d --build
+	@echo ""
+	@echo ">> Modo teste: contas novas já nascem com e-mail confirmado."
+	@echo ">> O link público aparece abaixo (https://....trycloudflare.com). Ctrl+C encerra o link."
+	@echo ""
+	cloudflared tunnel --no-autoupdate --url http://localhost:5173
 
 down: ## Derruba os containers
 	$(COMPOSE) down

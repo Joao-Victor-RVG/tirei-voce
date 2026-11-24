@@ -35,6 +35,8 @@ class Settings(BaseSettings):
     email_provider: Literal["console", "resend"] = "console"
     email_from: str = "Tirei Você! <nao-responda@tireivoce.com.br>"
     resend_api_key: str | None = None
+    # SÓ PARA TESTE: contas nascem com e-mail confirmado (proibido em produção).
+    auto_verify_emails: bool = False
     verify_email_ttl_hours: int = 24
     reset_password_ttl_minutes: int = 60
 
@@ -73,6 +75,8 @@ class Settings(BaseSettings):
                 raise ValueError("DRAW_HMAC_KEY precisa ter pelo menos 32 caracteres em produção")
             if self.email_provider == "resend" and not self.resend_api_key:
                 raise ValueError("RESEND_API_KEY é obrigatório com EMAIL_PROVIDER=resend")
+            if self.auto_verify_emails:
+                raise ValueError("AUTO_VERIFY_EMAILS não pode ser usado em produção")
             if not self.cookie_secure:
                 raise ValueError("COOKIE_SECURE precisa ser true em produção")
         return self
