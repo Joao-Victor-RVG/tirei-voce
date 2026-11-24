@@ -16,6 +16,7 @@ const ME = {
   email_reminders: true,
   phone: null,
   whatsapp_opt_in: false,
+  is_admin: false,
 };
 
 afterEach(() => {

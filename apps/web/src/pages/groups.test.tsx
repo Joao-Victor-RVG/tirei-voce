@@ -579,3 +579,75 @@ test("antes do evento mostra contagem para a revelação", async () => {
   expect(await screen.findByText(/A revelação abre no horário do evento/)).toBeInTheDocument();
   expect(calls.some((c) => c.path === "/groups/g1/my-santa")).toBe(false);
 });
+
+test("painel admin mostra números agregados e desativa usuário", async () => {
+  const calls = mockApi((url, init) => {
+    const path = url.pathname.replace("/api/v1", "");
+    if (path === "/me") return json({ ...ME, is_admin: true });
+    if (path === "/admin/metrics")
+      return json({
+        users: { total: 1284, last_7d: 32 },
+        users_verified: 1100,
+        groups: { total: 210, last_7d: 12 },
+        groups_by_status: { DRAFT: 10, OPEN: 50, CLOSED: 20, DRAWN: 100, FINISHED: 30 },
+        draws: { total: 130, last_7d: 9 },
+        participants: 1500,
+        avg_group_size: 7.1,
+        gifts_purchased: 400,
+        gifts_total: 800,
+        chat_messages_7d: 950,
+        push_subscriptions: 300,
+        scheduled_draws_pending: 4,
+        generated_at: "2026-11-24T00:00:00Z",
+      });
+    if (path === "/admin/users/u2/deactivate" && init.method === "POST")
+      return json({
+        id: "u2",
+        name: "Bia",
+        email: "bia@example.com",
+        email_verified: true,
+        is_active: false,
+        is_admin: false,
+        groups: 2,
+        created_at: "2026-11-01T00:00:00Z",
+      });
+    if (path === "/admin/users")
+      return json({
+        items: [
+          {
+            id: "u2",
+            name: "Bia",
+            email: "bia@example.com",
+            email_verified: true,
+            is_active: true,
+            is_admin: false,
+            groups: 2,
+            created_at: "2026-11-01T00:00:00Z",
+          },
+        ],
+        next_cursor: null,
+      });
+  });
+  renderRoute("/admin");
+  const user = userEvent.setup();
+  expect(await screen.findByText("+32 em 7 dias")).toBeInTheDocument();
+  expect(screen.getByText(/1,3\s?mil/)).toBeInTheDocument();
+  expect(screen.getByRole("meter", { name: "Presentes comprados" })).toHaveAttribute(
+    "aria-valuenow",
+    "400",
+  );
+  expect(screen.getByTitle("Sorteado: 100")).toBeInTheDocument();
+  await user.click(await screen.findByRole("button", { name: "Desativar" }));
+  await waitFor(() =>
+    expect(calls.some((c) => c.path === "/admin/users/u2/deactivate")).toBe(true),
+  );
+});
+
+test("não admin é levado para meus grupos", async () => {
+  mockApi((url) => {
+    if (url.pathname.endsWith("/me")) return json(ME);
+    if (url.pathname.endsWith("/groups")) return json({ items: [], next_cursor: null });
+  });
+  const { router } = renderRoute("/admin");
+  await waitFor(() => expect(router.state.location.pathname).toBe("/groups"));
+});

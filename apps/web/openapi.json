@@ -2643,10 +2643,343 @@
           }
         }
       }
+    },
+    "/api/v1/admin/metrics": {
+      "get": {
+        "tags": ["admin"],
+        "summary": "Metrics",
+        "operationId": "metrics_api_v1_admin_metrics_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminMetrics"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/users": {
+      "get": {
+        "tags": ["admin"],
+        "summary": "List Users",
+        "operationId": "list_users_api_v1_admin_users_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Cursor da página anterior",
+              "title": "Cursor"
+            },
+            "description": "Cursor da página anterior"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/users/{user_id}/deactivate": {
+      "post": {
+        "tags": ["admin"],
+        "summary": "Deactivate User",
+        "operationId": "deactivate_user_api_v1_admin_users__user_id__deactivate_post",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/users/{user_id}/activate": {
+      "post": {
+        "tags": ["admin"],
+        "summary": "Activate User",
+        "operationId": "activate_user_api_v1_admin_users__user_id__activate_post",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AdminMetrics": {
+        "properties": {
+          "users": {
+            "$ref": "#/components/schemas/CountWithRecent"
+          },
+          "users_verified": {
+            "type": "integer",
+            "title": "Users Verified"
+          },
+          "groups": {
+            "$ref": "#/components/schemas/CountWithRecent"
+          },
+          "groups_by_status": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/GroupStatus"
+            },
+            "type": "object",
+            "title": "Groups By Status"
+          },
+          "draws": {
+            "$ref": "#/components/schemas/CountWithRecent"
+          },
+          "participants": {
+            "type": "integer",
+            "title": "Participants"
+          },
+          "avg_group_size": {
+            "type": "number",
+            "title": "Avg Group Size"
+          },
+          "gifts_purchased": {
+            "type": "integer",
+            "title": "Gifts Purchased"
+          },
+          "gifts_total": {
+            "type": "integer",
+            "title": "Gifts Total"
+          },
+          "chat_messages_7d": {
+            "type": "integer",
+            "title": "Chat Messages 7D"
+          },
+          "push_subscriptions": {
+            "type": "integer",
+            "title": "Push Subscriptions"
+          },
+          "scheduled_draws_pending": {
+            "type": "integer",
+            "title": "Scheduled Draws Pending"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "users",
+          "users_verified",
+          "groups",
+          "groups_by_status",
+          "draws",
+          "participants",
+          "avg_group_size",
+          "gifts_purchased",
+          "gifts_total",
+          "chat_messages_7d",
+          "push_subscriptions",
+          "scheduled_draws_pending",
+          "generated_at"
+        ],
+        "title": "AdminMetrics",
+        "description": "Só números agregados: nada de pares, conversas ou listas."
+      },
+      "AdminUserOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "email_verified": {
+            "type": "boolean",
+            "title": "Email Verified"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "is_admin": {
+            "type": "boolean",
+            "title": "Is Admin"
+          },
+          "groups": {
+            "type": "integer",
+            "title": "Groups"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "email",
+          "email_verified",
+          "is_active",
+          "is_admin",
+          "groups",
+          "created_at"
+        ],
+        "title": "AdminUserOut"
+      },
+      "AdminUserPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdminUserOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": ["items", "next_cursor"],
+        "title": "AdminUserPage"
+      },
       "AuthConfigOut": {
         "properties": {
           "google_enabled": {
@@ -2945,6 +3278,21 @@
         "type": "object",
         "required": ["participant_id", "name", "options"],
         "title": "ConstrainedParticipant"
+      },
+      "CountWithRecent": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "last_7d": {
+            "type": "integer",
+            "title": "Last 7D"
+          }
+        },
+        "type": "object",
+        "required": ["total", "last_7d"],
+        "title": "CountWithRecent"
       },
       "CsrfOut": {
         "properties": {
@@ -3997,6 +4345,10 @@
           "whatsapp_opt_in": {
             "type": "boolean",
             "title": "Whatsapp Opt In"
+          },
+          "is_admin": {
+            "type": "boolean",
+            "title": "Is Admin"
           }
         },
         "type": "object",
@@ -4012,7 +4364,8 @@
           "has_google",
           "email_reminders",
           "phone",
-          "whatsapp_opt_in"
+          "whatsapp_opt_in",
+          "is_admin"
         ],
         "title": "MeOut"
       },

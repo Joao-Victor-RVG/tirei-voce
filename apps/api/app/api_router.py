@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends
 
+from app.modules.admin.router import router as admin_router
 from app.modules.auth.dependencies import verify_csrf
 from app.modules.auth.router import router as auth_router
 from app.modules.chat.router import router as chat_router
@@ -21,3 +22,4 @@ api_router.include_router(rules_router)
 api_router.include_router(draws_router)
 api_router.include_router(chat_router)
 api_router.include_router(push_router)
+api_router.include_router(admin_router)

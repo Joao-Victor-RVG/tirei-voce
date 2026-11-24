@@ -24,6 +24,7 @@ class MeOut(BaseModel):
     email_reminders: bool
     phone: str | None
     whatsapp_opt_in: bool
+    is_admin: bool
 
     @classmethod
     def from_user(cls, user: User) -> "MeOut":
@@ -40,6 +41,7 @@ class MeOut(BaseModel):
             email_reminders=user.email_reminders,
             phone=user.phone,
             whatsapp_opt_in=user.whatsapp_opt_in,
+            is_admin=user.is_admin,
         )
 
 

@@ -2,6 +2,7 @@ import type { RouteObject } from "react-router-dom";
 
 import { Layout } from "@/components/Layout";
 import { Protected } from "@/features/auth/RequireAuth";
+import { AdminPage } from "@/pages/AdminPage";
 import { CreateGroupPage } from "@/pages/CreateGroupPage";
 import { ForgotPasswordPage } from "@/pages/ForgotPasswordPage";
 import { GroupPage } from "@/pages/GroupPage";
@@ -26,6 +27,7 @@ export const routes: RouteObject[] = [
       { path: "/forgot-password", element: <ForgotPasswordPage /> },
       { path: "/reset-password", element: <ResetPasswordPage /> },
       { path: "/i/:code", element: <InvitePage /> },
+      { path: "/admin", element: <Protected page={<AdminPage />} /> },
       { path: "/groups", element: <Protected page={<GroupsPage />} /> },
       { path: "/groups/new", element: <Protected page={<CreateGroupPage />} /> },
       { path: "/groups/:groupId", element: <Protected page={<GroupPage />} /> },

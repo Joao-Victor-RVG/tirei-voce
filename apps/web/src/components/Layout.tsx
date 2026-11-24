@@ -44,6 +44,16 @@ export function Layout() {
               >
                 Meus grupos
               </NavLink>
+              {me.data.is_admin && (
+                <NavLink
+                  to="/admin"
+                  className={({ isActive }) =>
+                    cx("rounded-full px-3 py-2", isActive ? "bg-black/5" : "hover:bg-black/5")
+                  }
+                >
+                  Admin
+                </NavLink>
+              )}
               <NavLink
                 to="/profile"
                 className="rounded-full p-1 hover:bg-black/5"

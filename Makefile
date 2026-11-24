@@ -2,7 +2,7 @@ COMPOSE := docker compose -f infra/docker-compose.yml
 API := cd apps/api &&
 WEB := cd apps/web &&
 
-.PHONY: dev down logs migrate migration seed keys api-types prod-up prod-down test test-api test-web lint lint-api lint-web format help
+.PHONY: dev down logs migrate migration seed admin keys api-types prod-up prod-down test test-api test-web lint lint-api lint-web format help
 
 dev: ## Sobe tudo (postgres, redis, api, worker, web) com hot reload
 	$(COMPOSE) up --build
@@ -18,6 +18,9 @@ migrate: ## Aplica as migrations (com o compose rodando)
 
 seed: ## Carrega os dados iniciais (temas); idempotente
 	$(COMPOSE) exec api python -m app.seed
+
+admin: ## Dá acesso ao painel admin: make admin email=fulano@exemplo.com
+	$(COMPOSE) exec api python -m app.admin grant "$(email)"
 
 keys: ## Gera segredos novos (JWT, chaves do sorteio e VAPID do push)
 	@cd apps/api && uv run python -m app.keys
